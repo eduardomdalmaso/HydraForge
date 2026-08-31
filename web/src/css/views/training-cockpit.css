@@ -1,0 +1,87 @@
+/* ==========================================================================
+   HYDRAFORGE TRAINING COCKPIT STYLES (< 100 LINES)
+   ========================================================================== */
+
+.cockpit-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.25rem;
+}
+
+@media (max-width: 1100px) {
+  .cockpit-grid { grid-template-columns: 1fr; }
+}
+
+.selector-group { margin-bottom: 1.25rem; }
+
+.selector-label {
+  font-family: var(--font-oxanium);
+  font-size: 0.8rem;
+  color: var(--cb-cyan);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cyber-pill {
+  background: rgba(18, 24, 36, 0.8);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  color: #94a3b8;
+  padding: 0.4rem 0.85rem;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cyber-pill:hover {
+  border-color: var(--cb-cyan);
+  color: #fff;
+  background: rgba(0, 240, 255, 0.1);
+}
+
+.cyber-pill.active {
+  background: var(--cb-cyan);
+  color: #07080c;
+  font-weight: 700;
+  border-color: var(--cb-cyan);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
+.slider-row { display: flex; align-items: center; gap: 1rem; }
+.slider-row input[type="range"] { flex: 1; accent-color: var(--cb-cyan); }
+.slider-val { font-family: var(--font-mono); font-weight: 700; color: var(--cb-yellow); min-width: 3.5rem; text-align: right; }
+
+.launch-btn {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--cb-cyan) 0%, #00b4d8 100%);
+  color: #07080c;
+  font-family: var(--font-oxanium);
+  font-size: 1.1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border: none;
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px));
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-top: 1.25rem;
+}
+
+.launch-btn:hover:not(:disabled) {
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+.launch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
