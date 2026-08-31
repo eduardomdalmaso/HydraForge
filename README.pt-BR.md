@@ -44,7 +44,7 @@ flowchart TD
         UI_Cockpit[Cockpit de Treinamento & Lançador de Hiperparâmetros]
         UI_LiveHUD[Curvas ao Vivo: mAP50, Box/Cls Loss, VRAM]
         UI_Datasets[Dataset Studio & Visualizador de Anotações]
-        UI_Export[Model Zoo & Exportador 1-Clique TensorRT / ONNX]
+        UI_Export["Model Zoo & Exportador 1-Clique TensorRT / ONNX"]
     end
 
     subgraph GoControlPlane [Go Control Plane Engine :8081]
@@ -56,7 +56,7 @@ flowchart TD
 
     subgraph PythonWorker [Worker Python PyTorch Training]
         Trainer[Motor Ultralytics YOLOv8 / YOLO11 / YOLO26]
-        PyTorchCUDA[PyTorch 2.x + CUDA 13.3 (RTX 5090 32GB)]
+        PyTorchCUDA["PyTorch 2.x + CUDA 13.3 (RTX 5090 32GB)"]
         Callbacks[Callbacks por Época & Emissor de Métricas]
         Exporter[Exportador TensorRT FP8/FP16 & ONNX]
     end

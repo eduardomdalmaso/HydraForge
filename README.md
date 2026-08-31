@@ -42,9 +42,9 @@ Training, fine-tuning, and optimizing state-of-the-art YOLO computer vision mode
 flowchart TD
     subgraph Frontend [React SPA + Cyberpunk CSS]
         UI_Cockpit[Training Cockpit & Hyperparameter Launcher]
-        UI_LiveHUD[Live Training Curves: mAP50, Box/Cls Loss, VRAM]
+        UI_LiveHUD["Live Training Curves: mAP50, Box/Cls Loss, VRAM"]
         UI_Datasets[Dataset Studio & Annotation Viewer]
-        UI_Export[Model Zoo & 1-Click TensorRT / ONNX Exporter]
+        UI_Export["Model Zoo & 1-Click TensorRT / ONNX Exporter"]
     end
 
     subgraph GoControlPlane [Go Control Plane Engine :8081]
@@ -56,7 +56,7 @@ flowchart TD
 
     subgraph PythonWorker [Python PyTorch Training Worker]
         Trainer[Ultralytics Engine YOLOv8 / YOLO11 / YOLO26]
-        PyTorchCUDA[PyTorch 2.x + CUDA 13.3 (RTX 5090 32GB)]
+        PyTorchCUDA["PyTorch 2.x + CUDA 13.3 (RTX 5090 32GB)"]
         Callbacks[Epoch Callback & Metric Emitter]
         Exporter[TensorRT FP8/FP16 & ONNX Precision Exporter]
     end
