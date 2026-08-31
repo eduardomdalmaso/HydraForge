@@ -1,0 +1,137 @@
+package domain
+
+import (
+	"fmt"
+	"time"
+)
+
+// TaskType defines the vision task for the YOLO model.
+type TaskType string
+
+const (
+	TaskDetect   TaskType = "detect"
+	TaskSegment  TaskType = "segment"
+	TaskPose     TaskType = "pose"
+	TaskClassify TaskType = "classify"
+	TaskOBB      TaskType = "obb"
+)
+
+// JobStatus defines the state lifecycle of a training job.
+type JobStatus string
+
+const (
+	StatusQueued    JobStatus = "QUEUED"
+	StatusTraining  JobStatus = "TRAINING"
+	StatusPaused    JobStatus = "PAUSED"
+	StatusCompleted JobStatus = "COMPLETED"
+	StatusFailed    JobStatus = "FAILED"
+	StatusStopped   JobStatus = "STOPPED"
+)
+
+// Hyperparameters represents YOLO training hyperparameter configuration.
+type Hyperparameters struct {
+	Epochs        int     `json:"epochs"`
+	BatchSize     int     `json:"batch_size"` // -1 for auto-batch
+	ImageSize     int     `json:"imgsz"`      // 640, 1280, etc.
+	Optimizer     string  `json:"optimizer"`  // "AdamW", "SGD", "RMSprop"
+	LearningRate  float64 `json:"lr0"`
+	FinalLR       float64 `json:"lrf"`
+	Momentum      float64 `json:"momentum"`
+	WeightDecay   float64 `json:"weight_decay"`
+	WarmupEpochs  float64 `json:"warmup_epochs"`
+	UseAMP        bool    `json:"amp"`           // Automatic Mixed Precision FP16
+	CosineLR      bool    `json:"cos_lr"`        // Cosine learning rate scheduler
+	Patience      int     `json:"patience"`      // Early stopping epochs
+	DeviceID      string  `json:"device"`        // "0", "cuda:0", "cpu"
+	Workers       int     `json:"workers"`       // Dataloader workers
+	Mosaic        float64 `json:"mosaic"`        // Mosaic augmentation probability
+	Mixup         float64 `json:"mixup"`         // Mixup augmentation probability
+}
+
+// TrainingMetrics represents epoch-level metrics emitted by PyTorch.
+type TrainingMetrics struct {
+	Epoch        int     `json:"epoch"`
+	TotalEpochs  int     `json:"total_epochs"`
+	BoxLoss      float64 `json:"box_loss"`
+	ClsLoss      float64 `json:"cls_loss"`
+	DFLLoss      float64 `json:"dfl_loss"`
+	ValBoxLoss   float64 `json:"val_box_loss"`
+	ValClsLoss   float64 `json:"val_cls_loss"`
+	MAP50        float64 `json:"map50"`
+	MAP50_95     float64 `json:"map50_95"`
+	Precision    float64 `json:"precision"`
+	Recall       float64 `json:"recall"`
+	LearningRate float64 `json:"lr"`
+	GPUVRAMMB    float64 `json:"gpu_vram_mb"`
+}
+
+// TrainingJob represents a complete YOLO model training execution.
+type TrainingJob struct {
+	JobID           string          `json:"job_id"`
+	ModelArchitecture string        `json:"model_architecture"` // "yolov8n", "yolo11s", "yolov26m"
+	Task            TaskType        `json:"task"`
+	DatasetID       string          `json:"dataset_id"`
+	DatasetPath     string          `json:"dataset_path"`
+	Hyperparameters Hyperparameters `json:"hyperparameters"`
+	Status          JobStatus       `json:"status"`
+	CurrentEpoch    int             `json:"current_epoch"`
+	TotalEpochs     int             `json:"total_epochs"`
+	BestMAP50       float64         `json:"best_map50"`
+	Checkpoints     []string        `json:"checkpoints"`
+	OutputWeights   string          `json:"output_weights"`
+	ErrorMessage    string          `json:"error_message,omitempty"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+// Validate verifies domain business invariants.
+func (j *TrainingJob) Validate() error {
+	if j.JobID == "" {
+		return fmt.Errorf("%w: job_id required", ErrInvalidJobConfig)
+	}
+	if j.ModelArchitecture == "" {
+		return fmt.Errorf("%w: model_architecture required", ErrInvalidJobConfig)
+	}
+	if j.Hyperparameters.Epochs <= 0 || j.Hyperparameters.Epochs > 1000 {
+		return fmt.Errorf("%w: epochs must be between 1 and 1000", ErrInvalidJobConfig)
+	}
+	if j.Hyperparameters.ImageSize%32 != 0 || j.Hyperparameters.ImageSize <= 0 {
+		return fmt.Errorf("%w: imgsz must be a positive multiple of 32", ErrInvalidJobConfig)
+	}
+	return nil
+}
+
+// SetDefaults applies standard defaults.
+func (j *TrainingJob) SetDefaults() {
+	if j.CreatedAt.IsZero() {
+		j.CreatedAt = time.Now()
+	}
+	j.UpdatedAt = time.Now()
+	if j.Status == "" {
+		j.Status = StatusQueued
+	}
+	if j.Task == "" {
+		j.Task = TaskDetect
+	}
+	if j.Hyperparameters.Epochs == 0 {
+		j.Hyperparameters.Epochs = 100
+	}
+	if j.Hyperparameters.BatchSize == 0 {
+		j.Hyperparameters.BatchSize = 16
+	}
+	if j.Hyperparameters.ImageSize == 0 {
+		j.Hyperparameters.ImageSize = 640
+	}
+	if j.Hyperparameters.Optimizer == "" {
+		j.Hyperparameters.Optimizer = "AdamW"
+	}
+	if j.Hyperparameters.LearningRate == 0 {
+		j.Hyperparameters.LearningRate = 0.001
+	}
+	if j.Hyperparameters.DeviceID == "" {
+		j.Hyperparameters.DeviceID = "0"
+	}
+	if j.TotalEpochs == 0 {
+		j.TotalEpochs = j.Hyperparameters.Epochs
+	}
+}
