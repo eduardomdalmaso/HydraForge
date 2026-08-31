@@ -1,93 +1,68 @@
 /* ==========================================================================
-   METRIC CARDS & HUD PILLS (EXCLUSIVE METRIC STYLING)
+   CYBERPUNK CARDS & CONTAINER STYLES (< 100 LINES)
    ========================================================================== */
 
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
-}
+.view-container { max-width: 1400px; margin: 0 auto; width: 100%; }
+.view-header { margin-bottom: 1.5rem; }
+.view-title { font-family: var(--font-oxanium); font-size: 1.75rem; font-weight: 800; color: #fff; letter-spacing: 2px; }
+.view-subtitle { font-family: var(--font-mono); font-size: 0.8rem; color: var(--cb-cyan); letter-spacing: 1px; margin-top: 0.25rem; }
 
-.metric-card {
-  background-color: var(--cb-bg-surface);
+.cyber-card {
+  background: var(--cb-bg-surface);
   border: 1px solid var(--cb-border-dim);
   border-left: 3px solid var(--cb-cyan);
-  padding: 1.1rem;
+  padding: 1.25rem;
+  border-radius: 4px;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-/* Exclusive Metric Card Title - Standardized HYDRASTREAM Yellow */
-.metric-card-title {
-  font-family: var(--font-heading) !important;
-  font-size: 0.85rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.05em !important;
-  text-transform: uppercase !important;
-  color: var(--cb-card-title-color) !important; /* Standard Yellow */
-  display: block !important;
-  margin-bottom: 0.25rem !important;
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Exclusive Metric Value Display */
-.metric-value {
+.card-title {
+  font-family: var(--font-oxanium);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--cb-yellow);
+  letter-spacing: 1px;
+}
+
+.badge-cyan { background: rgba(0, 240, 255, 0.15); color: var(--cb-cyan); border: 1px solid var(--cb-cyan); padding: 0.2rem 0.5rem; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; border-radius: 2px; }
+.badge-yellow { background: rgba(252, 238, 10, 0.15); color: var(--cb-yellow); border: 1px solid var(--cb-yellow); padding: 0.2rem 0.5rem; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; border-radius: 2px; }
+.badge-green { background: rgba(0, 255, 102, 0.15); color: var(--cb-green); border: 1px solid var(--cb-green); padding: 0.2rem 0.5rem; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; border-radius: 2px; }
+
+.cyber-select {
+  width: 100%;
+  background: var(--cb-bg-elevated);
+  border: 1px solid var(--cb-border-dim);
+  color: #fff;
+  padding: 0.5rem 0.75rem;
   font-family: var(--font-mono);
-  font-size: 1.85rem;
-  font-weight: 800;
-  line-height: 1.2;
-  margin: 0.25rem 0;
-  color: var(--cb-text-main);
+  font-size: 0.85rem;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
 }
+.cyber-select:focus { border-color: var(--cb-cyan); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
 
-.metric-value.cyan { color: var(--cb-cyan); }
-.metric-value.emerald { color: #10b981; }
-.metric-value.amber { color: #fbbf24; }
-.metric-value.sky { color: #38bdf8; }
-.metric-value.magenta { color: #ec4899; }
-
-/* Standardized Metric Card Subtext / Footer Info */
-.metric-subtext {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--cb-text-muted);
-  display: block;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 0.15rem 0.5rem;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: bold;
-  background-color: rgba(0, 255, 102, 0.15);
+.status-badge.online {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(0, 255, 102, 0.12);
   color: var(--cb-green);
   border: 1px solid var(--cb-green);
-}
-
-.status-badge.offline {
-  background-color: rgba(255, 0, 85, 0.15);
-  color: var(--cb-magenta);
-  border-color: var(--cb-magenta);
-}
-
-.badge-protocol {
-  display: inline-block;
-  padding: 0.15rem 0.4rem;
+  padding: 0.25rem 0.6rem;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: bold;
-  background-color: rgba(0, 240, 255, 0.15);
-  color: var(--cb-cyan);
-  border: 1px solid var(--cb-cyan);
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 3px;
 }
-
-.badge-protocol.mp4 {
-  background-color: rgba(252, 238, 10, 0.15);
-  color: var(--cb-yellow);
-  border-color: var(--cb-yellow);
-}
-
-.badge-protocol.imageseq {
-  background-color: rgba(167, 139, 250, 0.15);
-  color: #a78bfa;
-  border-color: #a78bfa;
-}
+.pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cb-green); box-shadow: 0 0 8px var(--cb-green); }

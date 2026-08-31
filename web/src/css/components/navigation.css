@@ -1,87 +1,89 @@
 /* ==========================================================================
-   NAVIGATION & HEADER COMPONENTS (CYBERPUNK 2077 HUD)
+   NAVIGATION & SIDEBAR STYLES (< 100 LINES)
    ========================================================================== */
 
-.cyber-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.85rem 1.5rem;
-  background-color: var(--cb-bg-surface);
-  border-bottom: 1px solid var(--cb-border-dim);
-  border-left: 4px solid var(--cb-cyan);
-}
+.app-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; background: var(--cb-bg-void); }
 
-.cyber-sidebar {
-  width: 240px;
-  background-color: var(--cb-bg-surface);
+.sidebar-nav {
+  width: 270px;
+  background: var(--cb-bg-surface);
   border-right: 1px solid var(--cb-border-dim);
-  padding: 1.25rem 0.75rem;
   display: flex;
   flex-direction: column;
+  padding: 1.25rem 0.85rem;
+  flex-shrink: 0;
 }
 
-.cyber-nav-item {
+.brand-header {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.65rem 1rem;
-  color: var(--cb-text-muted);
-  text-decoration: none;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  border-left: 2px solid transparent;
-  transition: all 0.15s ease;
-  cursor: pointer;
+  gap: 0.75rem;
+  padding: 0.5rem 0.5rem 1.25rem;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.15);
+  margin-bottom: 1.25rem;
 }
+.brand-logo-icon { font-size: 1.75rem; filter: drop-shadow(0 0 8px rgba(255, 0, 85, 0.6)); }
+.brand-title { font-family: var(--font-oxanium); font-size: 1.25rem; font-weight: 800; color: var(--cb-cyan); letter-spacing: 2px; }
+.brand-subtitle { font-family: var(--font-mono); font-size: 0.7rem; color: var(--cb-yellow); letter-spacing: 1px; }
 
-.cyber-nav-item:hover, .cyber-nav-item.active {
-  color: var(--cb-cyan);
-  background-color: rgba(0, 240, 255, 0.05);
-  border-left-color: var(--cb-cyan);
-}
+.nav-menu { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
 
-.cyber-tab-group {
+.nav-btn {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.cyber-tab-btn {
-  padding: 0.4rem 1rem;
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-left: 3px solid transparent;
+  color: #94a3b8;
+  font-family: var(--font-oxanium);
+  font-size: 0.9rem;
   font-weight: 600;
-  color: var(--cb-text-muted);
-  background-color: var(--cb-bg-surface);
-  border: 1px solid var(--cb-border-dim);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
   clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
-  cursor: pointer;
-  transition: all 0.15s ease;
 }
 
-.cyber-tab-btn:hover { color: var(--cb-cyan); border-color: var(--cb-cyan); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
-.cyber-tab-btn.active { background-color: var(--cb-yellow); color: #000; border-color: var(--cb-yellow); font-weight: bold; }
+.nav-btn:hover { background: rgba(0, 240, 255, 0.05); color: #fff; border-color: rgba(0, 240, 255, 0.2); }
+.nav-btn.active {
+  background: rgba(0, 240, 255, 0.12);
+  color: var(--cb-cyan);
+  border-color: rgba(0, 240, 255, 0.4);
+  border-left-color: var(--cb-cyan);
+  box-shadow: inset 0 0 12px rgba(0, 240, 255, 0.15);
+}
 
-/* Cyberpunk 2077 Buttons (gwannon clip-path & glow) */
-.cyber-btn {
-  display: inline-flex;
+.nav-icon { font-size: 1.1rem; }
+.nav-label { flex: 1; }
+.nav-tag { font-family: var(--font-mono); font-size: 0.65rem; color: var(--cb-yellow); opacity: 0.8; }
+
+.sidebar-footer { padding-top: 1rem; border-top: 1px solid var(--cb-border-dim); display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #64748b; }
+.gpu-badge { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono); color: var(--cb-green); }
+.status-dot.green { width: 7px; height: 7px; border-radius: 50%; background: var(--cb-green); box-shadow: 0 0 6px var(--cb-green); }
+
+.main-content { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+.content-body { flex: 1; overflow-y: auto; padding: 1.5rem 2rem; }
+
+.top-header {
+  height: 60px;
+  background: var(--cb-bg-surface);
+  border-bottom: 1px solid var(--cb-border-dim);
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1.15rem;
-  font-family: var(--font-mono);
-  font-size: 0.825rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border: 1px solid var(--cb-border-dim);
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-  cursor: pointer;
-  transition: all 0.15s ease;
+  justify-content: space-between;
+  padding: 0 2rem;
+  flex-shrink: 0;
 }
 
-.cyber-btn-primary { background-color: rgba(0, 240, 255, 0.12); color: var(--cb-cyan); border-color: var(--cb-cyan); }
-.cyber-btn-primary:hover { background-color: var(--cb-cyan); color: #000; box-shadow: 0 0 16px rgba(0, 240, 255, 0.7); }
+.header-breadcrumbs { font-family: var(--font-oxanium); font-size: 0.85rem; color: #94a3b8; display: flex; gap: 0.5rem; }
+.crumb-active { color: var(--cb-cyan); font-weight: 700; }
+.header-status-group { display: flex; align-items: center; gap: 1rem; }
+.header-metric-pill { background: var(--cb-bg-elevated); padding: 0.35rem 0.75rem; border-radius: 3px; font-family: var(--font-mono); font-size: 0.8rem; display: flex; gap: 0.4rem; align-items: center; border: 1px solid var(--cb-border-dim); }
+.pill-label { color: #64748b; }
+.pill-val.cyan { color: var(--cb-cyan); font-weight: 700; }
+.pill-val.yellow { color: var(--cb-yellow); font-weight: 700; }
+.pill-sub { color: #94a3b8; font-size: 0.75rem; }
 
-.cyber-btn-secondary { background-color: var(--cb-bg-elevated); color: var(--cb-text-main); border-color: var(--cb-border-dim); }
-.cyber-btn-secondary:hover { color: #000; background-color: var(--cb-yellow); border-color: var(--cb-yellow); box-shadow: 0 0 16px rgba(252, 238, 10, 0.7); }
+.swagger-link-btn { background: var(--cb-cyan); color: #07080c; text-decoration: none; font-family: var(--font-oxanium); font-weight: 800; font-size: 0.75rem; padding: 0.35rem 0.75rem; clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%); }
