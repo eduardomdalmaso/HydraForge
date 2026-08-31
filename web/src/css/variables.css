@@ -1,15 +1,17 @@
 /* ==========================================================================
-   CYBERPUNK DESIGN SYSTEM - TOKENS & VARIABLES
+   CYBERPUNK DESIGN SYSTEM - TOKENS & VARIABLES (< 100 LINES)
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Advent+Pro:wght@300;400;600;700&family=Barlow:wght@300;400;600;700&family=Oxanium:wght@300;400;600;700;800&family=Tomorrow:wght@300;400;600;700;800&display=swap');
-
 :root {
-  /* Recommended Cyberpunk Fonts */
-  --font-display: 'Oxanium', sans-serif;
-  --font-heading: 'Tomorrow', sans-serif;
-  --font-body: 'Barlow', 'Advent Pro', sans-serif;
-  --font-mono: 'Oxanium', monospace;
+  /* High-Performance Font Stacks (Clean Fallbacks - Zero System Probing) */
+  --font-oxanium: 'Oxanium', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-tomorrow: 'Tomorrow', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-barlow: 'Barlow', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Oxanium', ui-monospace, monospace;
+
+  --font-display: var(--font-oxanium);
+  --font-heading: var(--font-tomorrow);
+  --font-body: var(--font-barlow);
 
   /* Dark Theme Palette */
   --cb-bg-void: #07080c;
@@ -24,7 +26,7 @@
   --cb-green: #00ff66;
   --cb-amber: #ffaa00;
 
-  /* Exclusive Typography Tokens */
+  /* Typography Colors */
   --cb-title-color: #fcee0a;
   --cb-card-title-color: #fcee0a;
   --cb-table-header-color: #f59e0b;
