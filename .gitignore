@@ -1,0 +1,42 @@
+# Build & Executables
+bin/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Node & Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+build/
+
+# Python & PyTorch Artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+runs/
+*.pt
+*.onnx
+*.engine
+*.tflite
+datasets/
+*.zip
+*.tar.gz
+
+# Environment & Secrets
+.env
+.env.local
+*.pem
+*.key
+*.crt
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
