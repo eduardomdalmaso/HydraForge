@@ -4,15 +4,19 @@ import BenchmarkSummaryCards from '../components/benchmarks/BenchmarkSummaryCard
 import BenchmarkResultsTable from '../components/benchmarks/BenchmarkResultsTable';
 import BenchmarkThroughputChart from '../components/benchmarks/BenchmarkThroughputChart';
 import { fetchBenchmarksAPI, launchBenchmarkAPI, fetchBenchmarkByIDAPI } from '../api/benchmark_client';
+import { fetchJobsAPI, fetchDatasetsAPI, fetchTelemetryAPI } from '../api/client';
 
 export default function BenchmarkStudio() {
   const [activeJob, setActiveJob] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [jobs, setJobs] = useState([]);
+  const [datasets, setDatasets] = useState([]);
+  const [gpuStats, setGpuStats] = useState(null);
 
   const loadLatestBenchmark = async () => {
     const list = await fetchBenchmarksAPI();
-    if (list && list.length > 0) {
+    if (list?.length > 0) {
       const latest = list[list.length - 1];
       setActiveJob(latest);
       setIsRunning(latest.status === 'RUNNING' || latest.status === 'QUEUED');
@@ -20,15 +24,19 @@ export default function BenchmarkStudio() {
   };
 
   useEffect(() => {
+    fetchJobsAPI().then(j => j && setJobs(j));
+    fetchDatasetsAPI().then(d => d && setDatasets(d));
+    fetchTelemetryAPI().then(t => t?.gpu_stats && setGpuStats(t.gpu_stats));
     loadLatestBenchmark();
+  }, []);
+
+  useEffect(() => {
     const interval = setInterval(async () => {
       if (activeJob?.job_id && isRunning) {
         const updated = await fetchBenchmarkByIDAPI(activeJob.job_id);
         if (updated) {
           setActiveJob(updated);
-          if (updated.status !== 'RUNNING' && updated.status !== 'QUEUED') {
-            setIsRunning(false);
-          }
+          if (updated.status !== 'RUNNING' && updated.status !== 'QUEUED') setIsRunning(false);
         }
       }
     }, 1000);
@@ -56,19 +64,12 @@ export default function BenchmarkStudio() {
         </p>
       </div>
 
-      {errorMsg && (
-        <div className="cyber-alert alert-critical">
-          <span>⚠️ {errorMsg}</span>
-        </div>
-      )}
-
+      {errorMsg && <div className="cyber-alert alert-critical"><span>⚠️ {errorMsg}</span></div>}
       <BenchmarkSummaryCards results={activeJob?.results} />
-
       <div className="benchmark-grid-top">
-        <BenchmarkLauncherCard onLaunch={handleLaunch} isRunning={isRunning} />
+        <BenchmarkLauncherCard onLaunch={handleLaunch} isRunning={isRunning} jobs={jobs} datasets={datasets} gpuStats={gpuStats} />
         <BenchmarkThroughputChart results={activeJob?.results} />
       </div>
-
       <BenchmarkResultsTable results={activeJob?.results} />
     </div>
   );

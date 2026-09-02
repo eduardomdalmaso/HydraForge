@@ -3,6 +3,9 @@ package application
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -86,6 +89,16 @@ func (s *TrainingService) CreateTrainingJob(ctx context.Context, job *domain.Tra
 
 		err := s.worker.StartTraining(context.Background(), &targetJob, func(m domain.TrainingMetrics) {
 			s.mu.Lock()
+			if m.CurrentBatch > 0 {
+				targetJob.CurrentBatch = m.CurrentBatch
+			}
+			if m.TotalBatches > 0 {
+				targetJob.TotalBatches = m.TotalBatches
+			}
+			if m.Epoch > 0 {
+				targetJob.CurrentEpoch = m.Epoch
+			}
+			s.activeJob = &targetJob
 			if m.EpochDurationSec > 0 && m.MAP50 > 0 {
 				s.recentMetrics = append(s.recentMetrics, m)
 				if len(s.recentMetrics) > 100 {
@@ -94,15 +107,19 @@ func (s *TrainingService) CreateTrainingJob(ctx context.Context, job *domain.Tra
 				if m.MAP50 > targetJob.BestMAP50 {
 					targetJob.BestMAP50 = m.MAP50
 				}
-				logLine := fmt.Sprintf("[Epoch %d/%d] Box Loss: %.3f | Cls: %.3f | mAP50: %.1f%% | %.0f FPS (%.1fs)",
+				if m.MAP50_95 > targetJob.BestMAP50_95 {
+					targetJob.BestMAP50_95 = m.MAP50_95
+				}
+				logLine := fmt.Sprintf("[Epoch %d/%d] Box Loss: %.4f | Cls: %.4f | mAP50: %.1f%% | %.0f FPS (%.1fs)",
 					m.Epoch, targetJob.Hyperparameters.Epochs, m.BoxLoss, m.ClsLoss, m.MAP50*100.0, m.FPS, m.EpochDurationSec)
 				s.rawLogs = append(s.rawLogs, logLine)
 				if len(s.rawLogs) > 100 {
 					s.rawLogs = s.rawLogs[1:]
 				}
 			} else if targetJob.CurrentBatch > 0 && targetJob.CurrentBatch%50 == 0 {
-				batchLog := fmt.Sprintf("[Batch %d/%d] Loss: %.3f | Power: %.0fW | %.0f FPS (%.1fs)",
-					targetJob.CurrentBatch, targetJob.TotalBatches, m.BoxLoss, m.PowerWatts, m.FPS, m.EpochDurationSec)
+				totalLoss := m.BoxLoss + m.ClsLoss
+				batchLog := fmt.Sprintf("[Batch %d/%d] Loss: %.4f (Box: %.4f, Cls: %.4f) | Power: %.0fW | %.0f FPS (%.1fs)",
+					targetJob.CurrentBatch, targetJob.TotalBatches, totalLoss, m.BoxLoss, m.ClsLoss, m.PowerWatts, m.FPS, m.EpochDurationSec)
 				s.rawLogs = append(s.rawLogs, batchLog)
 				if len(s.rawLogs) > 100 {
 					s.rawLogs = s.rawLogs[1:]
@@ -179,6 +196,32 @@ func (s *TrainingService) GetDataset(ctx context.Context, datasetID string) (*do
 // ListDatasets retrieves all registered datasets.
 func (s *TrainingService) ListDatasets(ctx context.Context) ([]*domain.Dataset, error) {
 	return s.datasetRepo.ListDatasets(ctx)
+}
+
+// RescanDatasets triggers an on-disk discovery rescan and returns updated datasets.
+func (s *TrainingService) RescanDatasets(ctx context.Context) ([]*domain.Dataset, error) {
+	if rescanable, ok := s.datasetRepo.(interface{ RescanDatasets() }); ok {
+		rescanable.RescanDatasets()
+	}
+	return s.datasetRepo.ListDatasets(ctx)
+}
+
+// DeleteDataset removes a dataset from the repository and optionally removes its directory from disk.
+func (s *TrainingService) DeleteDataset(ctx context.Context, datasetID string, deleteFiles bool) error {
+	ds, err := s.datasetRepo.GetDataset(ctx, datasetID)
+	if err != nil {
+		return err
+	}
+	if err := s.datasetRepo.DeleteDataset(ctx, datasetID); err != nil {
+		return err
+	}
+	if deleteFiles && ds.YAMLPath != "" {
+		dir := filepath.Dir(ds.YAMLPath)
+		if strings.HasPrefix(dir, "/home/hades/datasets/") || strings.HasPrefix(dir, "datasets/") {
+			_ = os.RemoveAll(dir)
+		}
+	}
+	return nil
 }
 
 // ListCheckpoints returns all checkpoints for a job.

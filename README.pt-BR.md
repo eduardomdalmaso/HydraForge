@@ -121,7 +121,7 @@ make build
 
 ## Roadmap
 
-- [ ] **Correção da Barra de Progresso da Época Atual (Current Epoch Progress):** Corrigir a sincronização do payload de telemetria intra-batch para que a barra de progresso da época atual anime em tempo real durante os lotes.
+- [x] **Correção da Barra de Progresso da Época Atual (Current Epoch Progress):** Corrigir a sincronização do payload de telemetria intra-batch para que a barra de progresso da época atual anime em tempo real durante os lotes.
 - [ ] **Motor de Quantization-Aware Training (QAT):** Loop de fine-tuning simulando ruído de quantização INT8/FP8 durante o treino para deploy com 0% de perda de precisão no TensorRT e NPUs de borda.
 - [ ] **Matriz de Confusão Interativa & Diagnóstico por Classe:** Visualizador integrado no HUD para inspeção granular de precisão, recall e curva ótima de F1-Score.
 - [ ] **Sentinela de Alerta Precoce de Overfitting:** Detecção heurística em tempo real de divergência na perda de validação.

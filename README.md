@@ -121,7 +121,7 @@ make build
 
 ## Roadmap
 
-- [ ] **Fix Current Epoch Progress Bar Stream:** Correct intra-epoch batch callback telemetry payload synchronization so the Current Epoch progress bar animates live during intra-epoch batches.
+- [x] **Fix Current Epoch Progress Bar Stream:** Correct intra-epoch batch callback telemetry payload synchronization so the Current Epoch progress bar animates live during intra-epoch batches.
 - [ ] **Quantization-Aware Training (QAT) Engine:** Fine-tuning loop emulating INT8/FP8 quantization noise during training for zero-accuracy-loss edge deployment on NVIDIA TensorRT and edge NPUs.
 - [ ] **Interactive Confusion Matrix & Class Diagnostics:** In-HUD drawer for granular per-class precision, recall, and F1-confidence curve optimization.
 - [ ] **Overfitting Early-Warning Sentinel:** Real-time heuristic anomaly detection alerting on validation loss divergence.

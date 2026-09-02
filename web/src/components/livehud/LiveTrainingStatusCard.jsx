@@ -9,9 +9,9 @@ export default function LiveTrainingStatusCard({ job, onAbortJob, onRestartJob, 
           <span className="badge-cyan">STANDBY / IDLE</span>
         </div>
         <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#94a3b8' }}>
-          <div style={{ fontFamily: 'var(--font-oxanium)', fontSize: '0.95rem', color: '#fff' }}>NENHUM TREINO EM EXECUÇÃO</div>
+          <div style={{ fontFamily: 'var(--font-oxanium)', fontSize: '0.95rem', color: '#fff' }}>NO ACTIVE TRAINING IN PROGRESS</div>
           <div style={{ fontSize: '0.75rem', marginTop: '0.35rem' }}>
-            Acesse o <strong>TRAINING COCKPIT</strong> para iniciar uma sessão no PyTorch / RTX 5090.
+            Navigate to <strong>TRAINING COCKPIT</strong> to launch a session on PyTorch / RTX 5090.
           </div>
           <button className="cyber-action-btn" style={{ marginTop: '1rem' }} onClick={() => window.location.hash = 'cockpit'}>
             COCKPIT

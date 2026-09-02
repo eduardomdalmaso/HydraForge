@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -130,8 +131,10 @@ func (s *SQLiteStore) migrate() error {
 
 	CREATE TABLE IF NOT EXISTS benchmark_jobs (
 		job_id TEXT PRIMARY KEY,
-		model_architecture TEXT NOT NULL,
-		weights_path TEXT NOT NULL,
+		model TEXT NOT NULL,
+		data TEXT NOT NULL DEFAULT '',
+		model_architecture TEXT DEFAULT '',
+		weights_path TEXT DEFAULT '',
 		imgsz INTEGER NOT NULL,
 		quantize INTEGER NOT NULL,
 		device TEXT NOT NULL,
@@ -156,7 +159,68 @@ func (s *SQLiteStore) migrate() error {
 	);
 	`
 	_, err := s.db.Exec(schema)
-	return err
+	if err != nil {
+		return err
+	}
+	_, _ = s.db.Exec(`ALTER TABLE training_jobs ADD COLUMN current_batch INTEGER DEFAULT 0;`)
+	_, _ = s.db.Exec(`ALTER TABLE training_jobs ADD COLUMN total_batches INTEGER DEFAULT 0;`)
+	_, _ = s.db.Exec(`ALTER TABLE training_jobs ADD COLUMN best_map50_95 REAL DEFAULT 0.0;`)
+	_, _ = s.db.Exec(`ALTER TABLE benchmark_jobs ADD COLUMN model TEXT DEFAULT '';`)
+	_, _ = s.db.Exec(`ALTER TABLE benchmark_jobs ADD COLUMN data TEXT DEFAULT '';`)
+	return nil
+}
+
+func (s *SQLiteStore) RescanDatasets() {
+	s.autoDiscoverDatasets("/home/hades/Documents/HydraForge/datasets")
+	s.autoDiscoverDatasets("datasets")
+	if _, err := os.Stat("/home/hades/datasets"); err == nil {
+		s.autoDiscoverDatasets("/home/hades/datasets")
+	}
+}
+
+func countImages(dir string) int {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0
+	}
+	count := 0
+	for _, e := range entries {
+		if !e.IsDir() {
+			ext := strings.ToLower(filepath.Ext(e.Name()))
+			if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".bmp" {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+func sanitizeYamlPaths(yamlPath, datasetDir string) {
+	content, err := os.ReadFile(yamlPath)
+	if err != nil {
+		return
+	}
+	s := string(content)
+	modified := false
+	if strings.Contains(s, "../train/images") {
+		s = strings.ReplaceAll(s, "../train/images", "train/images")
+		modified = true
+	}
+	if strings.Contains(s, "../valid/images") {
+		s = strings.ReplaceAll(s, "../valid/images", "valid/images")
+		modified = true
+	}
+	if strings.Contains(s, "../test/images") {
+		s = strings.ReplaceAll(s, "../test/images", "test/images")
+		modified = true
+	}
+	if !strings.Contains(s, "path:") {
+		s = fmt.Sprintf("path: %s\n%s", datasetDir, s)
+		modified = true
+	}
+	if modified {
+		_ = os.WriteFile(yamlPath, []byte(s), 0644)
+	}
 }
 
 func (s *SQLiteStore) autoDiscoverDatasets(datasetsDir string) {
@@ -166,28 +230,52 @@ func (s *SQLiteStore) autoDiscoverDatasets(datasetsDir string) {
 	}
 
 	for _, entry := range entries {
-		if entry.IsDir() {
-			id := entry.Name()
-			yamlPath := filepath.Join(datasetsDir, id, "data.yaml")
-			if _, err := os.Stat(yamlPath); err == nil {
-				trainCount := countDir(filepath.Join(datasetsDir, id, "train", "images"))
-				valCount := countDir(filepath.Join(datasetsDir, id, "valid", "images"))
-				if valCount == 0 {
-					valCount = countDir(filepath.Join(datasetsDir, id, "val", "images"))
-				}
-				testCount := countDir(filepath.Join(datasetsDir, id, "test", "images"))
-				name := strings.ReplaceAll(id, "_", " ")
-				name = strings.ToUpper(name[:1]) + name[1:]
-				classes := parseYamlClasses(yamlPath)
-				classesJSON, _ := json.Marshal(classes)
+		id := entry.Name()
+		fullPath := filepath.Join(datasetsDir, id)
+		fi, err := os.Stat(fullPath)
+		if err != nil || !fi.IsDir() {
+			continue
+		}
 
-				query := `INSERT INTO registered_datasets 
-					(dataset_id, name, task, yaml_path, classes_json, num_classes, train_images, val_images, test_images, size_bytes, created_at)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-					ON CONFLICT(dataset_id) DO UPDATE SET 
-						train_images=excluded.train_images, val_images=excluded.val_images, test_images=excluded.test_images`
-				_, _ = s.db.Exec(query, id, name, "detect", yamlPath, string(classesJSON), len(classes), trainCount, valCount, testCount, 0, time.Now())
+		yamlPath := filepath.Join(fullPath, "data.yaml")
+		if _, err := os.Stat(yamlPath); err != nil {
+			imgCount := countImages(fullPath)
+			lblDir := filepath.Join(fullPath, "labels")
+			if imgCount > 0 {
+				if _, err := os.Stat(lblDir); err == nil {
+					clsName := strings.ReplaceAll(id, "_", " ")
+					clsName = strings.ReplaceAll(clsName, "-", " ")
+					content := fmt.Sprintf("path: %s\ntrain: .\nval: .\nnc: 1\nnames:\n  0: %s\n", fullPath, clsName)
+					_ = os.WriteFile(yamlPath, []byte(content), 0644)
+				}
 			}
+		}
+
+		if _, err := os.Stat(yamlPath); err == nil {
+			sanitizeYamlPaths(yamlPath, fullPath)
+			trainCount := countDir(filepath.Join(fullPath, "train", "images"))
+			valCount := countDir(filepath.Join(fullPath, "valid", "images"))
+			if valCount == 0 {
+				valCount = countDir(filepath.Join(fullPath, "val", "images"))
+			}
+			testCount := countDir(filepath.Join(fullPath, "test", "images"))
+			if trainCount == 0 && valCount == 0 {
+				trainCount = countImages(fullPath)
+			}
+			name := strings.ReplaceAll(id, "_", " ")
+			name = strings.ReplaceAll(name, "-", " ")
+			name = strings.ToUpper(name[:1]) + name[1:]
+			classes := parseYamlClasses(yamlPath)
+			classesJSON, _ := json.Marshal(classes)
+
+			query := `INSERT INTO registered_datasets 
+				(dataset_id, name, task, yaml_path, classes_json, num_classes, train_images, val_images, test_images, size_bytes, created_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				ON CONFLICT(dataset_id) DO UPDATE SET 
+					name=excluded.name, yaml_path=excluded.yaml_path,
+					classes_json=excluded.classes_json, num_classes=excluded.num_classes,
+					train_images=excluded.train_images, val_images=excluded.val_images, test_images=excluded.test_images`
+			_, _ = s.db.Exec(query, id, name, "detect", yamlPath, string(classesJSON), len(classes), trainCount, valCount, testCount, 0, time.Now())
 		}
 	}
 }
@@ -205,13 +293,17 @@ func (s *SQLiteStore) SaveJob(ctx context.Context, job *domain.TrainingJob) erro
 	query := `INSERT INTO training_jobs (
 		job_id, model_architecture, task, dataset_id, dataset_path,
 		hyperparameters_json, status, current_epoch, total_epochs,
-		best_map50, total_energy_kwh, avg_power_watts, peak_vram_mb,
+		current_batch, total_batches,
+		best_map50, best_map50_95, total_energy_kwh, avg_power_watts, peak_vram_mb,
 		avg_fps, duration_sec, output_weights, error_message, created_at, updated_at
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(job_id) DO UPDATE SET
 		status=excluded.status,
 		current_epoch=excluded.current_epoch,
+		current_batch=excluded.current_batch,
+		total_batches=excluded.total_batches,
 		best_map50=excluded.best_map50,
+		best_map50_95=excluded.best_map50_95,
 		total_energy_kwh=excluded.total_energy_kwh,
 		avg_power_watts=excluded.avg_power_watts,
 		peak_vram_mb=excluded.peak_vram_mb,
@@ -230,7 +322,8 @@ func (s *SQLiteStore) SaveJob(ctx context.Context, job *domain.TrainingJob) erro
 	_, err = s.db.ExecContext(ctx, query,
 		job.JobID, job.ModelArchitecture, string(job.Task), job.DatasetID, job.DatasetPath,
 		string(paramsJSON), string(job.Status), job.CurrentEpoch, job.TotalEpochs,
-		job.BestMAP50, job.TotalEnergyKWh, job.AvgPowerWatts, job.PeakVRAMMB,
+		job.CurrentBatch, job.TotalBatches,
+		job.BestMAP50, job.BestMAP50_95, job.TotalEnergyKWh, job.AvgPowerWatts, job.PeakVRAMMB,
 		job.AvgFPS, job.DurationSec, job.OutputWeights, job.ErrorMessage, job.CreatedAt, job.UpdatedAt,
 	)
 	return err
@@ -242,7 +335,8 @@ func (s *SQLiteStore) GetJob(ctx context.Context, jobID string) (*domain.Trainin
 	defer s.mu.RUnlock()
 
 	query := `SELECT job_id, model_architecture, task, dataset_id, dataset_path,
-		hyperparameters_json, status, current_epoch, total_epochs, best_map50,
+		hyperparameters_json, status, current_epoch, total_epochs,
+		current_batch, total_batches, best_map50, best_map50_95,
 		total_energy_kwh, avg_power_watts, peak_vram_mb, avg_fps, duration_sec,
 		output_weights, error_message, created_at, updated_at
 		FROM training_jobs WHERE job_id = ?`
@@ -252,7 +346,8 @@ func (s *SQLiteStore) GetJob(ctx context.Context, jobID string) (*domain.Trainin
 	row := s.db.QueryRowContext(ctx, query, jobID)
 	err := row.Scan(
 		&job.JobID, &job.ModelArchitecture, &taskStr, &job.DatasetID, &job.DatasetPath,
-		&paramsJSON, &statusStr, &job.CurrentEpoch, &job.TotalEpochs, &job.BestMAP50,
+		&paramsJSON, &statusStr, &job.CurrentEpoch, &job.TotalEpochs,
+		&job.CurrentBatch, &job.TotalBatches, &job.BestMAP50, &job.BestMAP50_95,
 		&job.TotalEnergyKWh, &job.AvgPowerWatts, &job.PeakVRAMMB, &job.AvgFPS, &job.DurationSec,
 		&job.OutputWeights, &job.ErrorMessage, &job.CreatedAt, &job.UpdatedAt,
 	)
@@ -279,14 +374,16 @@ func (s *SQLiteStore) ListJobs(ctx context.Context, status string) ([]*domain.Tr
 
 	if status != "" {
 		query = `SELECT job_id, model_architecture, task, dataset_id, dataset_path,
-			hyperparameters_json, status, current_epoch, total_epochs, best_map50,
+			hyperparameters_json, status, current_epoch, total_epochs,
+			current_batch, total_batches, best_map50, best_map50_95,
 			total_energy_kwh, avg_power_watts, peak_vram_mb, avg_fps, duration_sec,
 			output_weights, error_message, created_at, updated_at
 			FROM training_jobs WHERE status = ? ORDER BY created_at DESC`
 		rows, err = s.db.QueryContext(ctx, query, status)
 	} else {
 		query = `SELECT job_id, model_architecture, task, dataset_id, dataset_path,
-			hyperparameters_json, status, current_epoch, total_epochs, best_map50,
+			hyperparameters_json, status, current_epoch, total_epochs,
+			current_batch, total_batches, best_map50, best_map50_95,
 			total_energy_kwh, avg_power_watts, peak_vram_mb, avg_fps, duration_sec,
 			output_weights, error_message, created_at, updated_at
 			FROM training_jobs ORDER BY created_at DESC`
@@ -304,7 +401,8 @@ func (s *SQLiteStore) ListJobs(ctx context.Context, status string) ([]*domain.Tr
 		var taskStr, statusStr, paramsJSON string
 		if err := rows.Scan(
 			&job.JobID, &job.ModelArchitecture, &taskStr, &job.DatasetID, &job.DatasetPath,
-			&paramsJSON, &statusStr, &job.CurrentEpoch, &job.TotalEpochs, &job.BestMAP50,
+			&paramsJSON, &statusStr, &job.CurrentEpoch, &job.TotalEpochs,
+			&job.CurrentBatch, &job.TotalBatches, &job.BestMAP50, &job.BestMAP50_95,
 			&job.TotalEnergyKWh, &job.AvgPowerWatts, &job.PeakVRAMMB, &job.AvgFPS, &job.DurationSec,
 			&job.OutputWeights, &job.ErrorMessage, &job.CreatedAt, &job.UpdatedAt,
 		); err != nil {
@@ -434,6 +532,15 @@ func (s *SQLiteStore) ListDatasets(ctx context.Context) ([]*domain.Dataset, erro
 	return list, nil
 }
 
+// DeleteDataset removes a dataset record from the database.
+func (s *SQLiteStore) DeleteDataset(ctx context.Context, datasetID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	_, err := s.db.ExecContext(ctx, "DELETE FROM registered_datasets WHERE dataset_id = ?", datasetID)
+	return err
+}
+
 // SaveCheckpoint saves a model checkpoint with primary key ID.
 func (s *SQLiteStore) SaveCheckpoint(ctx context.Context, ckpt *domain.ModelCheckpoint) error {
 	s.mu.Lock()
@@ -520,14 +627,14 @@ func (s *SQLiteStore) SaveBenchmark(ctx context.Context, job *domain.BenchmarkJo
 
 	fmtsJSON, _ := json.Marshal(job.TargetFormats)
 	query := `INSERT INTO benchmark_jobs (
-		job_id, model, data, imgsz, quantize, device,
+		job_id, model, data, model_architecture, weights_path, imgsz, quantize, device,
 		target_formats_json, status, error_message, created_at, updated_at
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(job_id) DO UPDATE SET status=excluded.status, error_message=excluded.error_message, updated_at=excluded.updated_at`
 
 	now := time.Now()
 	_, err := s.db.ExecContext(ctx, query,
-		job.JobID, job.Model, job.Data, job.ImageSize, job.Quantize,
+		job.JobID, job.Model, job.Data, job.Model, job.Data, job.ImageSize, job.Quantize,
 		job.Device, string(fmtsJSON), string(job.Status), job.ErrorMessage, now, now,
 	)
 	return err
@@ -552,6 +659,7 @@ func (s *SQLiteStore) GetBenchmark(ctx context.Context, jobID string) (*domain.B
 	}
 	b.Status = domain.BenchmarkStatus(statusStr)
 	_ = json.Unmarshal([]byte(fmtsJSON), &b.TargetFormats)
+	b.Results = s.loadBenchmarkResults(ctx, jobID)
 	return &b, nil
 }
 
@@ -578,6 +686,7 @@ func (s *SQLiteStore) ListBenchmarks(ctx context.Context, status string) ([]*dom
 		}
 		b.Status = domain.BenchmarkStatus(statusStr)
 		_ = json.Unmarshal([]byte(fmtsJSON), &b.TargetFormats)
+		b.Results = s.loadBenchmarkResults(ctx, b.JobID)
 		list = append(list, &b)
 	}
 	if err := rows.Err(); err != nil {
@@ -601,10 +710,31 @@ func (s *SQLiteStore) AddBenchmarkResult(ctx context.Context, jobID string, resu
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	query := `INSERT INTO benchmark_results (job_id, format, status, latency_ms, fps, size_mb, map50_95, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := s.db.ExecContext(ctx, query, jobID, result.Format, string(result.Status), result.InferenceTimeMS, result.FPS, result.SizeMB, result.MAP50_95, time.Now())
+	query := `INSERT INTO benchmark_results (job_id, format, status, latency_ms, fps, size_mb, map50_95, export_args, error_message, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err := s.db.ExecContext(ctx, query, jobID, result.Format, string(result.Status), result.InferenceTimeMS, result.FPS, result.SizeMB, result.MAP50_95, result.ExportArgs, result.ErrorMessage, time.Now())
 	return err
+}
+
+func (s *SQLiteStore) loadBenchmarkResults(ctx context.Context, jobID string) []domain.FormatBenchmarkResult {
+	rows, err := s.db.QueryContext(ctx, `SELECT format, status, latency_ms, fps, size_mb, map50_95, export_args, error_message FROM benchmark_results WHERE job_id = ? ORDER BY id ASC`, jobID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var results []domain.FormatBenchmarkResult
+	for rows.Next() {
+		var r domain.FormatBenchmarkResult
+		var status, exportArgs, errMsg sql.NullString
+		if err := rows.Scan(&r.Format, &status, &r.InferenceTimeMS, &r.FPS, &r.SizeMB, &r.MAP50_95, &exportArgs, &errMsg); err == nil {
+			r.Status = status.String
+			r.ExportArgs = exportArgs.String
+			r.ErrorMessage = errMsg.String
+			results = append(results, r)
+		}
+	}
+	return results
 }
 
 // DeleteBenchmark removes a benchmark job.
@@ -634,7 +764,7 @@ func countDir(dirPath string) int {
 func parseYamlClasses(yamlPath string) []string {
 	data, err := os.ReadFile(yamlPath)
 	if err != nil {
-		return []string{"carro", "moto", "caminhao", "onibus"}
+		return []string{"object"}
 	}
 	lines := strings.Split(string(data), "\n")
 	var classes []string
@@ -642,6 +772,21 @@ func parseYamlClasses(yamlPath string) []string {
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "names:") {
+			rest := strings.TrimSpace(strings.TrimPrefix(trimmed, "names:"))
+			if strings.HasPrefix(rest, "[") && strings.HasSuffix(rest, "]") {
+				inner := strings.Trim(rest, "[]")
+				parts := strings.Split(inner, ",")
+				for _, p := range parts {
+					c := strings.TrimSpace(p)
+					c = strings.Trim(c, "'\"")
+					if c != "" {
+						classes = append(classes, c)
+					}
+				}
+				if len(classes) > 0 {
+					return classes
+				}
+			}
 			inNames = true
 			continue
 		}
@@ -663,7 +808,7 @@ func parseYamlClasses(yamlPath string) []string {
 		}
 	}
 	if len(classes) == 0 {
-		return []string{"carro", "moto", "caminhao", "onibus"}
+		return []string{"object"}
 	}
 	return classes
 }

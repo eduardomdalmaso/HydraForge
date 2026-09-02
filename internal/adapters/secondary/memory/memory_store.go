@@ -234,6 +234,14 @@ func (s *MemoryStore) ListDatasets(ctx context.Context) ([]*domain.Dataset, erro
 	return res, nil
 }
 
+// DeleteDataset removes a dataset from memory.
+func (s *MemoryStore) DeleteDataset(ctx context.Context, datasetID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.datasets, datasetID)
+	return nil
+}
+
 // SaveCheckpoint stores a checkpoint.
 func (s *MemoryStore) SaveCheckpoint(ctx context.Context, checkpoint *domain.ModelCheckpoint) error {
 	s.mu.Lock()

@@ -140,6 +140,8 @@ func (w *PythonWorker) StartTraining(ctx context.Context, job *domain.TrainingJo
 					metricCallback(domain.TrainingMetrics{
 						Epoch:            b.Epoch,
 						TotalEpochs:      job.Hyperparameters.Epochs,
+						CurrentBatch:     b.Batch,
+						TotalBatches:     b.TotalBatches,
 						BoxLoss:          b.BoxLoss,
 						ClsLoss:          b.ClsLoss,
 						PowerWatts:       b.PowerWatts,
@@ -191,8 +193,12 @@ func (w *PythonWorker) RunBenchmark(ctx context.Context, job *domain.BenchmarkJo
 	}
 
 	// Reference base metrics based on model family and precision
+	isCPU := strings.ToLower(job.Device) == "cpu"
 	baseSizeMB := 6.2
 	baseLatency := 6.4 // ms
+	if isCPU {
+		baseLatency = 28.5 // Host CPU baseline
+	}
 	baseMap := 0.528
 
 	switch job.Quantize {
@@ -207,6 +213,20 @@ func (w *PythonWorker) RunBenchmark(ctx context.Context, job *domain.BenchmarkJo
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(250 * time.Millisecond): // Processing delay per format
+			if isCPU && (fmtName == "TensorRT" || fmtName == "engine") {
+				resultCallback(domain.FormatBenchmarkResult{
+					Format:          fmtName,
+					Status:          "FAILED",
+					SizeMB:          0,
+					InferenceTimeMS: 0,
+					FPS:             0,
+					MAP50_95:        0,
+					ExportArgs:      "CUDA GPU required for TensorRT",
+					ErrorMessage:    "TensorRT requires an NVIDIA CUDA GPU",
+				})
+				continue
+			}
+
 			var latencyMs float64
 			var sizeMB float64
 			var mapScore float64

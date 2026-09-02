@@ -19,6 +19,7 @@ type DatasetRepository interface {
 	SaveDataset(ctx context.Context, dataset *domain.Dataset) error
 	GetDataset(ctx context.Context, datasetID string) (*domain.Dataset, error)
 	ListDatasets(ctx context.Context) ([]*domain.Dataset, error)
+	DeleteDataset(ctx context.Context, datasetID string) error
 }
 
 // CheckpointRepository handles persistence of model checkpoints and export artifacts.

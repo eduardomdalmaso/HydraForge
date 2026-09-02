@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { formatLoss } from '../../utils/formatters';
 
 export default function LiveTerminalLogsCard({ job, rawLogs, recentMetrics, gpuStats }) {
   const terminalRef = useRef(null);
@@ -34,7 +35,7 @@ export default function LiveTerminalLogsCard({ job, rawLogs, recentMetrics, gpuS
     if (recentMetrics && recentMetrics.length > 0) {
       recentMetrics.slice(-6).forEach(m => {
         lines.push({
-          text: `[Epoch ${m.epoch}/${epochs}] Box Loss: ${m.box_loss?.toFixed(3) || '0'} | Cls: ${m.cls_loss?.toFixed(3) || '0'} | mAP50: ${((m.map50 || 0) * 100).toFixed(1)}% | ${Math.round(m.fps || 0)} FPS`,
+          text: `[Epoch ${m.epoch}/${epochs}] Box Loss: ${formatLoss(m.box_loss)} | Cls: ${formatLoss(m.cls_loss)} | mAP50: ${((m.map50 || 0) * 100).toFixed(1)}% | ${Math.round(m.fps || 0)} FPS`,
           type: 'metric'
         });
       });

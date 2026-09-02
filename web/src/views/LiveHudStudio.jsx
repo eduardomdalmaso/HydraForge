@@ -12,19 +12,25 @@ export default function LiveHudStudio() {
   const [telemetry, setTelemetry] = useState(null);
 
   const loadLiveData = async () => {
-    const list = await fetchJobsAPI();
-    if (list) {
-      setJobs(list);
+    const [list, tel] = await Promise.all([fetchJobsAPI(), fetchTelemetryAPI()]);
+    if (list) setJobs(list);
+    if (tel) {
+      setTelemetry(tel);
+      if (tel.active_job) {
+        setActiveJob(tel.active_job);
+      } else if (list) {
+        const running = list.find(j => j.status === 'TRAINING' || j.status === 'RUNNING' || j.status === 'QUEUED');
+        setActiveJob(running || list[0] || null);
+      }
+    } else if (list) {
       const running = list.find(j => j.status === 'TRAINING' || j.status === 'RUNNING' || j.status === 'QUEUED');
       setActiveJob(running || list[0] || null);
     }
-    const tel = await fetchTelemetryAPI();
-    if (tel) setTelemetry(tel);
   };
 
   useEffect(() => {
     loadLiveData();
-    const interval = setInterval(loadLiveData, 1500);
+    const interval = setInterval(loadLiveData, 1000);
     return () => clearInterval(interval);
   }, []);
 

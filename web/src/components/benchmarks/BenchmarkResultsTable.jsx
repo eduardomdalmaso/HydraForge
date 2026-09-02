@@ -12,7 +12,7 @@ export default function BenchmarkResultsTable({ results = [] }) {
       <div style={{ padding: 0, overflowX: 'auto', marginTop: '0.5rem' }}>
         {!hasResults ? (
           <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontSize: '0.8rem' }}>
-            Nenhum resultado de exportação gravado. Execute uma compilação de benchmark acima para gerar métricas de latência e tamanho de binário.
+            No export benchmark results recorded. Run a benchmark compilation above to evaluate latency and binary engine size metrics.
           </div>
         ) : (
           <table className="cyber-table">

@@ -60,6 +60,8 @@ type Hyperparameters struct {
 type TrainingMetrics struct {
 	Epoch            int     `json:"epoch"`
 	TotalEpochs      int     `json:"total_epochs"`
+	CurrentBatch     int     `json:"current_batch,omitempty"`
+	TotalBatches     int     `json:"total_batches,omitempty"`
 	BoxLoss          float64 `json:"box_loss"`
 	ClsLoss          float64 `json:"cls_loss"`
 	DFLLoss          float64 `json:"dfl_loss"`
@@ -92,6 +94,7 @@ type TrainingJob struct {
 	CurrentBatch      int             `json:"current_batch,omitempty"`
 	TotalBatches      int             `json:"total_batches,omitempty"`
 	BestMAP50         float64         `json:"best_map50"`
+	BestMAP50_95      float64         `json:"best_map50_95"`
 	Checkpoints       []string        `json:"checkpoints"`
 	OutputWeights     string          `json:"output_weights"`
 	TotalEnergyKWh    float64         `json:"total_energy_kwh"`

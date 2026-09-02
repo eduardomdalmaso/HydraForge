@@ -16,6 +16,8 @@ type TrainingUseCase interface {
 	RegisterDataset(ctx context.Context, dataset *domain.Dataset) (*domain.Dataset, error)
 	GetDataset(ctx context.Context, datasetID string) (*domain.Dataset, error)
 	ListDatasets(ctx context.Context) ([]*domain.Dataset, error)
+	RescanDatasets(ctx context.Context) ([]*domain.Dataset, error)
+	DeleteDataset(ctx context.Context, datasetID string, deleteFiles bool) error
 
 	// Checkpoints & Model Zoo
 	ListCheckpoints(ctx context.Context, jobID string) ([]*domain.ModelCheckpoint, error)

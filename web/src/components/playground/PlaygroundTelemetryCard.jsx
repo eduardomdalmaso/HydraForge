@@ -56,7 +56,7 @@ export default function PlaygroundTelemetryCard({ telemetry, detections = [], se
         <div style={{ maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
           {detections.length === 0 ? (
             <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', padding: '1.2rem 0' }}>
-              Nenhum alvo detectado. Execute um scan no botão acima.
+              No targets detected. Execute a scan using the trigger above.
             </div>
           ) : (
             detections.map((det) => {

@@ -9,18 +9,20 @@ const SCALES = [
   { id: 'x', label: 'XLarge (x)' }
 ];
 const TASKS = [
-  { id: 'detect', label: 'Detection' },
-  { id: 'segment', label: 'Segmentation' },
-  { id: 'pose', label: 'Pose Estimation' },
-  { id: 'classify', label: 'Classification' },
-  { id: 'obb', label: 'Oriented Box (OBB)' }
+  { id: 'detect', label: '🎯 Detection' },
+  { id: 'segment', label: '✂️ Segment' },
+  { id: 'pose', label: '🤸 Pose' },
+  { id: 'classify', label: '🏷️ Classify' },
+  { id: 'obb', label: '📐 OBB' }
 ];
 
 export default function ArchitectureCard({ family, setFamily, scale, setScale, task, setTask }) {
   const modelTag = `${family}${scale}${task !== 'detect' ? '-' + task : ''}.pt`;
 
   return (
-    <div className="cyber-card">
+    <div className="cyber-card" style={{ position: 'relative' }}>
+      <div className="hud-corner-tl" />
+      <div className="hud-corner-br" />
       <div className="card-header">
         <span className="card-title">1. MODEL ARCHITECTURE MATRIX</span>
         <span className="badge-cyan">{modelTag}</span>

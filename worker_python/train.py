@@ -64,6 +64,38 @@ def main():
     epoch_timer = [time.time()]
     batch_in_epoch = [0]
 
+    def extract_losses(trainer):
+        box_loss, cls_loss, dfl_loss = 0.0, 0.0, 0.0
+        source = None
+        if hasattr(trainer, 'tloss') and trainer.tloss:
+            source = trainer.tloss
+        elif hasattr(trainer, 'loss_items') and trainer.loss_items is not None:
+            source = trainer.loss_items
+
+        if isinstance(source, dict):
+            for k, v in source.items():
+                val = float(v.item() if hasattr(v, 'item') else v)
+                k_low = k.lower()
+                if 'box' in k_low:
+                    box_loss = val
+                elif 'cls' in k_low:
+                    cls_loss = val
+                elif 'dfl' in k_low or 'l1' in k_low:
+                    dfl_loss = val
+        elif isinstance(source, (list, tuple)):
+            vals = [float(x.item() if hasattr(x, 'item') else x) for x in source]
+            if len(vals) > 0: box_loss = vals[0]
+            if len(vals) > 1: cls_loss = vals[1]
+            if len(vals) > 2: dfl_loss = vals[2]
+        elif hasattr(source, 'tolist'):
+            vals = source.tolist()
+            if isinstance(vals, (list, tuple)):
+                if len(vals) > 0: box_loss = float(vals[0])
+                if len(vals) > 1: cls_loss = float(vals[1])
+                if len(vals) > 2: dfl_loss = float(vals[2])
+
+        return box_loss, cls_loss, dfl_loss
+
     def on_train_epoch_start(trainer):
         epoch_timer[0] = time.time()
         batch_in_epoch[0] = 0
@@ -74,23 +106,14 @@ def main():
             epoch = trainer.epoch + 1
             total_epochs = trainer.epochs
             duration = max(0.1, time.time() - epoch_timer[0])
-            
-            box_loss = float(metrics.get('train/box_loss', 0.0))
-            cls_loss = float(metrics.get('train/cls_loss', 0.0))
-            dfl_loss = float(metrics.get('train/dfl_loss', 0.0))
-            if box_loss == 0.0 and hasattr(trainer, 'loss_items') and trainer.loss_items is not None:
-                try:
-                    li = trainer.loss_items
-                    if hasattr(li, 'tolist'):
-                        li = li.tolist()
-                    if isinstance(li, (list, tuple)) and len(li) > 0:
-                        box_loss = float(li[0])
-                        if len(li) > 1:
-                            cls_loss = float(li[1])
-                        if len(li) > 2:
-                            dfl_loss = float(li[2])
-                except Exception:
-                    pass
+
+            box_loss, cls_loss, dfl_loss = extract_losses(trainer)
+            if box_loss == 0.0:
+                box_loss = float(metrics.get('train/box_loss', 0.0))
+            if cls_loss == 0.0:
+                cls_loss = float(metrics.get('train/cls_loss', 0.0))
+            if dfl_loss == 0.0:
+                dfl_loss = float(metrics.get('train/dfl_loss', 0.0))
 
             map50 = float(metrics.get('metrics/mAP50(B)', 0.0))
             map50_95 = float(metrics.get('metrics/mAP50-95(B)', 0.0))
@@ -170,19 +193,7 @@ def main():
             
             if batch_idx % 2 == 0 or batch_idx == total_batches:
                 epoch = trainer.epoch + 1
-                box_loss = 0.0
-                cls_loss = 0.0
-                if hasattr(trainer, 'loss_items') and trainer.loss_items is not None:
-                    try:
-                        li = trainer.loss_items
-                        if hasattr(li, 'tolist'):
-                            li = li.tolist()
-                        if isinstance(li, (list, tuple)) and len(li) > 0:
-                            box_loss = float(li[0])
-                            if len(li) > 1:
-                                cls_loss = float(li[1])
-                    except Exception:
-                        pass
+                box_loss, cls_loss, _ = extract_losses(trainer)
                 
                 imgs_so_far = (trainer.epoch * total_batches + batch_idx) * args.batch
                 current_fps = float(imgs_so_far) / max(0.1, elapsed_sec)

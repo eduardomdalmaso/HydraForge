@@ -24,7 +24,7 @@ export default function HardwareEstimatorCard({
         <div className="selector-label">TARGET DATASET</div>
         <select className="cyber-select" value={selectedDataset || ''} onChange={(e) => setSelectedDataset(e.target.value)}>
           {datasets.length === 0 ? (
-            <option value="">Nenhum dataset importado (importe em /datasets)</option>
+            <option value="">No dataset imported (import via DATASET STUDIO)</option>
           ) : (
             datasets.map((d) => (
               <option key={d.dataset_id} value={d.dataset_id}>

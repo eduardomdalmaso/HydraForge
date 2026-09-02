@@ -11,6 +11,8 @@ func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler
 	mux.HandleFunc("/api/v1/training/datasets/audit/", h.HandleDatasetAudit)
 	mux.HandleFunc("/api/v1/training/datasets/image", h.HandleDatasetImage)
 	mux.HandleFunc("/api/v1/training/datasets/sample", h.HandleDatasetSample)
+	mux.HandleFunc("/api/v1/training/datasets/rescan", h.HandleDatasetRescan)
+	mux.HandleFunc("/api/v1/training/datasets/register-path", h.HandleDatasetRegisterPath)
 	mux.HandleFunc("/api/v1/training/datasets", h.HandleDatasets)
 	mux.HandleFunc("/api/v1/training/datasets/", h.HandleDatasetByID)
 	mux.HandleFunc("/api/v1/training/telemetry", h.HandleTelemetry)

@@ -13,7 +13,7 @@ export default function ModelDistillationCard({ onLaunchDistill }) {
       </div>
 
       <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.65rem' }}>
-        Transfira o poder preditivo do modelo <strong>Teacher ({teacher})</strong> para o <strong>Student ({student})</strong> aumentando mAP com custo zero de inferência.
+        Transfer predictive power from the <strong>Teacher ({teacher})</strong> model to the <strong>Student ({student})</strong> model, boosting mAP with zero inference latency overhead.
       </div>
 
       <div className="distill-connector-box">

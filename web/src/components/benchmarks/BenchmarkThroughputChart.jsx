@@ -13,7 +13,7 @@ export default function BenchmarkThroughputChart({ results = [] }) {
       <div style={{ marginTop: '0.5rem' }}>
         {valid.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#94a3b8', fontSize: '0.8rem' }}>
-            Nenhum benchmark executado ainda. Selecione os runtimes e execute o teste.
+            No benchmarks executed yet. Select runtime formats and execute the speed test.
           </div>
         ) : (
           valid.map((r, idx) => {

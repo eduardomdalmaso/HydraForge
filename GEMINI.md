@@ -63,6 +63,7 @@ O projeto possui integração direta com as skills oficiais de IA localizadas em
 | Skill | Finalidade |
 | :--- | :--- |
 | **`validate-project`** | Executa auditoria de conformidade DDD, contagem de linhas web e testes unitários. |
+| **`cyberpunk-ui`** | Design system, tokens, HUD reticles, modais de alerta e regras de CSS Cyberpunk (< 100 linhas). |
 | **`yolo`** | Router principal de comandos e CLI Ultralytics. |
 | **`yolo-models`** | Guia de arquiteturas: YOLOv8, YOLO11, YOLO26 (Nano a XLarge) e variantes (`detect`, `segment`, `pose`, `obb`). |
 | **`yolo-training`** | Hiperparâmetros, otimizadores (`AdamW`/`SGD`), batch size dinâmico, AMP FP16/BF16 e callbacks. |

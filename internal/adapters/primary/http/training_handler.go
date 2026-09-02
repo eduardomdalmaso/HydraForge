@@ -349,16 +349,43 @@ func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Req
 	json.NewEncoder(w).Encode(foundMatch)
 }
 
-// HandleDatasetByID handles GET /api/v1/training/datasets/{id}.
+// HandleDatasetByID handles GET and DELETE /api/v1/training/datasets/{id}.
 func (h *TrainingHandler) HandleDatasetByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	id := strings.TrimPrefix(r.URL.Path, "/api/v1/training/datasets/")
-	d, err := h.useCase.GetDataset(r.Context(), id)
-	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusNotFound)
+	if id == "rescan" {
+		h.HandleDatasetRescan(w, r)
 		return
 	}
-	json.NewEncoder(w).Encode(d)
+	if id == "register-path" {
+		h.HandleDatasetRegisterPath(w, r)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		d, err := h.useCase.GetDataset(r.Context(), id)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusNotFound)
+			return
+		}
+		json.NewEncoder(w).Encode(d)
+
+	case http.MethodDelete:
+		deleteFiles := r.URL.Query().Get("delete_files") == "true"
+		if err := h.useCase.DeleteDataset(r.Context(), id, deleteFiles); err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":     "deleted",
+			"dataset_id": id,
+		})
+
+	default:
+		http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+	}
 }
 
 // HandleTelemetry handles GET /api/v1/training/telemetry.
@@ -448,28 +475,82 @@ func (h *TrainingHandler) HandleDatasetImport(w http.ResponseWriter, r *http.Req
 		}
 		os.Remove(tmpZip.Name())
 
-		// Create dataset domain entry
-		yamlPath := filepath.Join(targetDir, "data.yaml")
-		dsName := strings.ReplaceAll(cleanBase, "_", " ")
-		dsName = strings.ToUpper(dsName[:1]) + dsName[1:]
-
-		ds := &domain.Dataset{
-			DatasetID:   cleanBase,
-			Name:        dsName,
-			Task:        domain.TaskDetect,
-			YAMLPath:    yamlPath,
-			Classes:     []string{"object"},
-			NumClasses:  1,
-			CreatedAt:   time.Now(),
-		}
-
-		if saved, err := h.useCase.RegisterDataset(r.Context(), ds); err == nil {
-			registered = append(registered, saved)
+		// Rescan to discover and sanitize newly extracted dataset
+		_, _ = h.useCase.RescanDatasets(r.Context())
+		if ds, err := h.useCase.GetDataset(r.Context(), cleanBase); err == nil {
+			registered = append(registered, ds)
 		}
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(registered)
+}
+
+// HandleDatasetRescan handles POST /api/v1/training/datasets/rescan.
+func (h *TrainingHandler) HandleDatasetRescan(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	datasets, err := h.useCase.RescanDatasets(r.Context())
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"failed to rescan datasets: %s"}`, err.Error()), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(datasets)
+}
+
+// HandleDatasetRegisterPath handles POST /api/v1/training/datasets/register-path.
+func (h *TrainingHandler) HandleDatasetRegisterPath(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var req struct {
+		Path      string `json:"path"`
+		DatasetID string `json:"dataset_id"`
+		Name      string `json:"name"`
+		Task      string `json:"task"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"invalid JSON body"}`, http.StatusBadRequest)
+		return
+	}
+	if req.Path == "" {
+		http.Error(w, `{"error":"directory path is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	fi, err := os.Stat(req.Path)
+	if err != nil || !fi.IsDir() {
+		http.Error(w, fmt.Sprintf(`{"error":"directory not found: %s"}`, req.Path), http.StatusBadRequest)
+		return
+	}
+
+	id := req.DatasetID
+	if id == "" {
+		id = filepath.Base(req.Path)
+	}
+	id = strings.ToLower(strings.ReplaceAll(id, " ", "_"))
+
+	targetLink := filepath.Join("/home/hades/datasets", id)
+	if _, err := os.Stat(targetLink); err != nil && targetLink != req.Path {
+		_ = os.Symlink(req.Path, targetLink)
+	}
+
+	datasets, err := h.useCase.RescanDatasets(r.Context())
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	var found *domain.Dataset
+	for _, d := range datasets {
+		if d.DatasetID == id {
+			found = d
+			break
+		}
+	}
+	if found == nil && len(datasets) > 0 {
+		found = datasets[0]
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(found)
 }
 
 // HandleDatasetMerge handles POST /api/v1/training/datasets/merge.
@@ -501,10 +582,20 @@ func (h *TrainingHandler) HandleDatasetMerge(w http.ResponseWriter, r *http.Requ
 		cleanTarget = fmt.Sprintf("merged_%d", time.Now().Unix())
 	}
 	outDir := filepath.Join("/home/hades/datasets", cleanTarget)
+	_ = os.RemoveAll(outDir)
 	_ = os.MkdirAll(filepath.Join(outDir, "train", "images"), 0755)
 	_ = os.MkdirAll(filepath.Join(outDir, "train", "labels"), 0755)
 	_ = os.MkdirAll(filepath.Join(outDir, "valid", "images"), 0755)
 	_ = os.MkdirAll(filepath.Join(outDir, "valid", "labels"), 0755)
+
+	if len(req.Classes) == 0 {
+		req.Classes = []string{"cell-phone"}
+	}
+	classIdxMap := make(map[string]string)
+	for i, c := range req.Classes {
+		classIdxMap[c] = strconv.Itoa(i)
+		classIdxMap[strconv.Itoa(i)] = strconv.Itoa(i)
+	}
 
 	trainCount := 0
 	valCount := 0
@@ -513,36 +604,78 @@ func (h *TrainingHandler) HandleDatasetMerge(w http.ResponseWriter, r *http.Requ
 		srcDir := filepath.Join("/home/hades/datasets", dsID)
 		prefix := dsID + "_"
 		dsMap := req.Mappings[dsID]
+		srcDataset, _ := h.useCase.GetDataset(r.Context(), dsID)
 
-		for _, split := range []string{"train", "valid", "val"} {
-			targetSplit := "train"
-			if split != "train" {
-				targetSplit = "valid"
+		type splitScan struct {
+			imgDir string
+			lblDir string
+			split  string
+		}
+		var toScan []splitScan
+
+		// Check standard splits
+		hasStandardSplits := false
+		for _, s := range []string{"train", "valid", "val", "test"} {
+			iDir := filepath.Join(srcDir, s, "images")
+			lDir := filepath.Join(srcDir, s, "labels")
+			if _, err := os.Stat(iDir); err == nil {
+				hasStandardSplits = true
+				target := "train"
+				if s == "valid" || s == "val" || s == "test" {
+					target = "valid"
+				}
+				toScan = append(toScan, splitScan{imgDir: iDir, lblDir: lDir, split: target})
 			}
-			imgSrc := filepath.Join(srcDir, split, "images")
-			lblSrc := filepath.Join(srcDir, split, "labels")
+		}
 
-			entries, err := os.ReadDir(imgSrc)
+		// If no standard subfolders, scan flat directory (e.g. cell-phone-raw)
+		if !hasStandardSplits {
+			iDir := srcDir
+			lDir := filepath.Join(srcDir, "labels")
+			if _, err := os.Stat(filepath.Join(srcDir, "images")); err == nil {
+				iDir = filepath.Join(srcDir, "images")
+			}
+			if _, err := os.Stat(lDir); err != nil {
+				lDir = iDir
+			}
+			toScan = append(toScan, splitScan{imgDir: iDir, lblDir: lDir, split: "flat"})
+		}
+
+		for _, sc := range toScan {
+			entries, err := os.ReadDir(sc.imgDir)
 			if err != nil {
 				continue
 			}
 
+			fileIdx := 0
 			for _, e := range entries {
 				if e.IsDir() {
 					continue
 				}
 				imgName := e.Name()
-				ext := filepath.Ext(imgName)
+				ext := strings.ToLower(filepath.Ext(imgName))
 				if ext != ".jpg" && ext != ".png" && ext != ".jpeg" {
 					continue
 				}
-				base := strings.TrimSuffix(imgName, ext)
+				fileIdx++
+
+				targetSplit := sc.split
+				if targetSplit == "flat" {
+					if fileIdx%10 == 0 {
+						targetSplit = "valid"
+					} else {
+						targetSplit = "train"
+					}
+				}
+
+				base := strings.TrimSuffix(imgName, filepath.Ext(imgName))
 				dstImg := filepath.Join(outDir, targetSplit, "images", prefix+imgName)
-				srcImg := filepath.Join(imgSrc, imgName)
+				srcImg := filepath.Join(sc.imgDir, imgName)
+				_ = os.Remove(dstImg)
 				_ = os.Symlink(srcImg, dstImg)
 
-				// Copy and rewrite label
-				srcLbl := filepath.Join(lblSrc, base+".txt")
+				// Label rewriting
+				srcLbl := filepath.Join(sc.lblDir, base+".txt")
 				dstLbl := filepath.Join(outDir, targetSplit, "labels", prefix+base+".txt")
 				if data, err := os.ReadFile(srcLbl); err == nil {
 					var newLines []string
@@ -550,12 +683,27 @@ func (h *TrainingHandler) HandleDatasetMerge(w http.ResponseWriter, r *http.Requ
 						parts := strings.Fields(line)
 						if len(parts) >= 5 {
 							oldCid := parts[0]
-							newCid := "0"
+							targetClass := ""
 							if mapped, ok := dsMap[oldCid]; ok {
-								if mapped == "ignorar" || mapped == "-1" {
-									continue
+								targetClass = mapped
+							} else if srcDataset != nil {
+								if idx, err := strconv.Atoi(oldCid); err == nil && idx >= 0 && idx < len(srcDataset.Classes) {
+									origName := srcDataset.Classes[idx]
+									if mapped, ok := dsMap[origName]; ok {
+										targetClass = mapped
+									}
 								}
-								newCid = mapped
+							}
+
+							if targetClass == "ignore" || targetClass == "ignorar" || targetClass == "-1" {
+								continue
+							}
+
+							newCid := "0"
+							if idxStr, exists := classIdxMap[targetClass]; exists {
+								newCid = idxStr
+							} else if len(req.Classes) == 1 {
+								newCid = "0"
 							}
 							newLines = append(newLines, newCid+" "+strings.Join(parts[1:], " "))
 						}
@@ -572,16 +720,12 @@ func (h *TrainingHandler) HandleDatasetMerge(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	if len(req.Classes) == 0 {
-		req.Classes = []string{"carro", "moto", "caminhao", "onibus"}
-	}
-
 	yamlPath := filepath.Join(outDir, "data.yaml")
 	var namesYaml strings.Builder
 	for i, c := range req.Classes {
 		namesYaml.WriteString(fmt.Sprintf("  %d: %s\n", i, c))
 	}
-	yamlContent := fmt.Sprintf("# Ultralytics YOLO Unified Dataset\npath: /home/hades/datasets/%s\ntrain: train/images\nval: valid/images\ntest: test/images\n\nnc: %d\nnames:\n%s", cleanTarget, len(req.Classes), namesYaml.String())
+	yamlContent := fmt.Sprintf("# Ultralytics YOLO Unified Dataset\npath: /home/hades/datasets/%s\ntrain: train/images\nval: valid/images\ntest: valid/images\n\nnc: %d\nnames:\n%s", cleanTarget, len(req.Classes), namesYaml.String())
 	_ = os.WriteFile(yamlPath, []byte(yamlContent), 0644)
 
 	ds := &domain.Dataset{
@@ -601,7 +745,6 @@ func (h *TrainingHandler) HandleDatasetMerge(w http.ResponseWriter, r *http.Requ
 		http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
 		return
 	}
-
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(saved)
 }
