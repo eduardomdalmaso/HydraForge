@@ -89,6 +89,8 @@ type TrainingJob struct {
 	Status            JobStatus       `json:"status"`
 	CurrentEpoch      int             `json:"current_epoch"`
 	TotalEpochs       int             `json:"total_epochs"`
+	CurrentBatch      int             `json:"current_batch,omitempty"`
+	TotalBatches      int             `json:"total_batches,omitempty"`
 	BestMAP50         float64         `json:"best_map50"`
 	Checkpoints       []string        `json:"checkpoints"`
 	OutputWeights     string          `json:"output_weights"`
@@ -121,6 +123,13 @@ func (j *TrainingJob) Validate() error {
 
 // SetDefaults applies standard defaults.
 func (j *TrainingJob) SetDefaults() {
+	if j.JobID == "" {
+		arch := j.ModelArchitecture
+		if arch == "" {
+			arch = "yolo26n"
+		}
+		j.JobID = fmt.Sprintf("run_%s_%d", arch, time.Now().UnixMilli())
+	}
 	if j.CreatedAt.IsZero() {
 		j.CreatedAt = time.Now()
 	}

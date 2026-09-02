@@ -1,11 +1,32 @@
 import React from 'react';
 
-export default function LiveMetricsChartsCard({ job }) {
-  const map50 = job?.metrics?.map50 || 0;
-  const map5095 = job?.metrics?.map50_95 || 0;
-  const boxLoss = job?.metrics?.box_loss || 0;
-  const clsLoss = job?.metrics?.cls_loss || 0;
-  const hasData = job && (job.current_epoch > 0 || job.status === 'COMPLETED');
+export default function LiveMetricsChartsCard({ job, recentMetrics }) {
+  const latest = (recentMetrics && recentMetrics.length > 0) ? recentMetrics[recentMetrics.length - 1] : null;
+  const map50 = latest?.map50 || job?.best_map50 || 0;
+  const map5095 = latest?.map50_95 || 0;
+  const boxLoss = latest?.box_loss || 0;
+  const clsLoss = latest?.cls_loss || 0;
+  const hasData = (recentMetrics && recentMetrics.length > 0) || (job && job.current_epoch > 0);
+
+  const getPoints = (type) => {
+    if (!recentMetrics || recentMetrics.length < 2) return null;
+    const total = recentMetrics[0].total_epochs || 50;
+    return recentMetrics.map((m) => {
+      const x = Math.round((m.epoch / total) * 380 + 10);
+      let y = 90;
+      if (type === 'loss') {
+        const lossVal = Math.min(3.0, (m.box_loss || 0) + (m.cls_loss || 0));
+        y = Math.round(95 - (lossVal / 3.0) * 75);
+      } else {
+        const mapVal = Math.min(1.0, m.map50_95 || m.map50 || 0);
+        y = Math.round(95 - mapVal * 80);
+      }
+      return `${x},${y}`;
+    }).join(' ');
+  };
+
+  const lossPoints = getPoints('loss');
+  const mapPoints = getPoints('map');
 
   return (
     <div className="cyber-card">
@@ -50,11 +71,15 @@ export default function LiveMetricsChartsCard({ job }) {
           <line x1="0" y1="30" x2="400" y2="30" className="hud-grid-line" />
           <line x1="0" y1="60" x2="400" y2="60" className="hud-grid-line" />
           <line x1="0" y1="90" x2="400" y2="90" className="hud-grid-line" />
-          {hasData ? (
+          {hasData && lossPoints && mapPoints ? (
             <>
-              <path d="M 10,95 Q 80,70 160,45 T 320,25 T 390,18" className="hud-chart-line-loss" />
-              <path d="M 10,100 Q 80,80 160,50 T 280,32 T 390,20" className="hud-chart-line-map" />
+              <polyline fill="none" stroke="var(--cb-magenta)" strokeWidth="2" points={lossPoints} />
+              <polyline fill="none" stroke="var(--cb-green)" strokeWidth="2" points={mapPoints} />
             </>
+          ) : hasData ? (
+            <text x="200" y="60" textAnchor="middle" fill="var(--cb-cyan)" fontFamily="var(--font-mono)" fontSize="11">
+              Processando Épocas no PyTorch... acumulando pontos da curva
+            </text>
           ) : (
             <text x="200" y="60" textAnchor="middle" fill="#64748b" fontFamily="var(--font-mono)" fontSize="11">
               {job ? 'PyTorch inicializado na GPU... aguardando Época 1' : 'Aguardando início do treinamento para desenhar curvas...'}

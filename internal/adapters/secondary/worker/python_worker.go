@@ -84,6 +84,7 @@ func (w *PythonWorker) StartTraining(ctx context.Context, job *domain.TrainingJo
 	}
 
 	cmd := exec.CommandContext(ctx, pythonBin, args...)
+	cmd.Dir = "/home/hades/Documents/HydraForge"
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -97,12 +98,45 @@ func (w *PythonWorker) StartTraining(ctx context.Context, job *domain.TrainingJo
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "HYDRA_METRIC:") {
-			jsonStr := strings.TrimPrefix(line, "HYDRA_METRIC:")
+		if idx := strings.Index(line, "HYDRA_METRIC:"); idx != -1 {
+			jsonStr := line[idx+len("HYDRA_METRIC:"):]
 			var m domain.TrainingMetrics
 			if err := json.Unmarshal([]byte(jsonStr), &m); err == nil {
 				if metricCallback != nil {
 					metricCallback(m)
+				}
+			}
+		} else if idx := strings.Index(line, "HYDRA_BATCH:"); idx != -1 {
+			jsonStr := line[idx+len("HYDRA_BATCH:"):]
+			var b struct {
+				Epoch          int     `json:"epoch"`
+				Batch          int     `json:"batch"`
+				TotalBatches   int     `json:"total_batches"`
+				BoxLoss        float64 `json:"box_loss"`
+				ClsLoss        float64 `json:"cls_loss"`
+				PowerWatts     float64 `json:"power_watts"`
+				TotalEnergyKWh float64 `json:"total_energy_kwh"`
+				FPS            float64 `json:"fps"`
+				DurationSec    float64 `json:"duration_sec"`
+			}
+			if err := json.Unmarshal([]byte(jsonStr), &b); err == nil {
+				job.CurrentEpoch = b.Epoch
+				job.CurrentBatch = b.Batch
+				job.TotalBatches = b.TotalBatches
+				job.TotalEnergyKWh = b.TotalEnergyKWh
+				job.AvgFPS = b.FPS
+				job.DurationSec = b.DurationSec
+				job.AvgPowerWatts = b.PowerWatts
+				if metricCallback != nil {
+					metricCallback(domain.TrainingMetrics{
+						Epoch:            b.Epoch,
+						TotalEpochs:      job.Hyperparameters.Epochs,
+						BoxLoss:          b.BoxLoss,
+						ClsLoss:          b.ClsLoss,
+						PowerWatts:       b.PowerWatts,
+						FPS:              b.FPS,
+						EpochDurationSec: b.DurationSec,
+					})
 				}
 			}
 		}

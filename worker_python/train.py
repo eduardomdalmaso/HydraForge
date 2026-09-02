@@ -43,9 +43,11 @@ def main():
         model = YOLO('yolov8n.pt')
 
     epoch_timer = [time.time()]
+    batch_in_epoch = [0]
 
     def on_train_epoch_start(trainer):
         epoch_timer[0] = time.time()
+        batch_in_epoch[0] = 0
 
     def on_fit_epoch_end(trainer):
         try:
@@ -54,10 +56,22 @@ def main():
             total_epochs = trainer.epochs
             duration = max(0.1, time.time() - epoch_timer[0])
             
-            tloss = trainer.tloss
-            box_loss = float(tloss[0]) if len(tloss) > 0 else 0.0
-            cls_loss = float(tloss[1]) if len(tloss) > 1 else 0.0
-            dfl_loss = float(tloss[2]) if len(tloss) > 2 else 0.0
+            box_loss = float(metrics.get('train/box_loss', 0.0))
+            cls_loss = float(metrics.get('train/cls_loss', 0.0))
+            dfl_loss = float(metrics.get('train/dfl_loss', 0.0))
+            if box_loss == 0.0 and hasattr(trainer, 'loss_items') and trainer.loss_items is not None:
+                try:
+                    li = trainer.loss_items
+                    if hasattr(li, 'tolist'):
+                        li = li.tolist()
+                    if isinstance(li, (list, tuple)) and len(li) > 0:
+                        box_loss = float(li[0])
+                        if len(li) > 1:
+                            cls_loss = float(li[1])
+                        if len(li) > 2:
+                            dfl_loss = float(li[2])
+                except Exception:
+                    pass
 
             map50 = float(metrics.get('metrics/mAP50(B)', 0.0))
             map50_95 = float(metrics.get('metrics/mAP50-95(B)', 0.0))
@@ -78,7 +92,12 @@ def main():
                     pass
 
             # Calculate train throughput FPS
-            total_imgs = len(trainer.train_loader.dataset) if hasattr(trainer, 'train_loader') and trainer.train_loader else 30000
+            total_imgs = 31048
+            try:
+                if hasattr(trainer, 'train_loader') and trainer.train_loader:
+                    total_imgs = len(trainer.train_loader.dataset)
+            except Exception:
+                pass
             fps = float(total_imgs) / duration
 
             payload = {
@@ -93,7 +112,7 @@ def main():
                 "map50_95": map50_95,
                 "precision": precision,
                 "recall": recall,
-                "lr": float(trainer.optimizer.param_groups[0]['lr']) if trainer.optimizer else 0.001,
+                "lr": float(trainer.optimizer.param_groups[0]['lr']) if (hasattr(trainer, 'optimizer') and trainer.optimizer) else 0.001,
                 "gpu_vram_mb": vram,
                 "power_watts": power_w,
                 "temp_celsius": temp_c,
@@ -102,10 +121,70 @@ def main():
                 "epoch_duration_sec": duration
             }
             print(f"HYDRA_METRIC:{json.dumps(payload)}", flush=True)
-        except Exception:
-            pass
+        except Exception as e:
+            sys.stderr.write(f"CALLBACK_ERR: {e}\n")
+
+    job_start_time = time.time()
+    accumulated_energy = [0.0]
+    last_batch_time = [time.time()]
+
+    def on_train_batch_end(trainer):
+        try:
+            batch_in_epoch[0] += 1
+            batch_idx = batch_in_epoch[0]
+            now = time.time()
+            dt = max(0.001, now - last_batch_time[0])
+            last_batch_time[0] = now
+            
+            total_batches = len(trainer.train_loader) if (hasattr(trainer, 'train_loader') and trainer.train_loader) else 1000
+            
+            power_w = 0.0
+            if nvml_handle:
+                try:
+                    power_w = float(pynvml.nvmlDeviceGetPowerUsage(nvml_handle)) / 1000.0
+                except Exception:
+                    pass
+            
+            # Integrate energy in kWh
+            accumulated_energy[0] += (power_w * (dt / 3600.0)) / 1000.0
+            elapsed_sec = now - job_start_time
+            
+            if batch_idx % 2 == 0 or batch_idx == total_batches:
+                epoch = trainer.epoch + 1
+                box_loss = 0.0
+                cls_loss = 0.0
+                if hasattr(trainer, 'loss_items') and trainer.loss_items is not None:
+                    try:
+                        li = trainer.loss_items
+                        if hasattr(li, 'tolist'):
+                            li = li.tolist()
+                        if isinstance(li, (list, tuple)) and len(li) > 0:
+                            box_loss = float(li[0])
+                            if len(li) > 1:
+                                cls_loss = float(li[1])
+                    except Exception:
+                        pass
+                
+                imgs_so_far = (trainer.epoch * total_batches + batch_idx) * args.batch
+                current_fps = float(imgs_so_far) / max(0.1, elapsed_sec)
+                
+                batch_payload = {
+                    "epoch": epoch,
+                    "batch": batch_idx,
+                    "total_batches": total_batches,
+                    "box_loss": box_loss,
+                    "cls_loss": cls_loss,
+                    "power_watts": power_w,
+                    "total_energy_kwh": accumulated_energy[0],
+                    "fps": current_fps,
+                    "duration_sec": elapsed_sec
+                }
+                print(f"\nHYDRA_BATCH:{json.dumps(batch_payload)}", flush=True)
+        except Exception as e:
+            sys.stderr.write(f"BATCH_ERR: {e}\n")
 
     model.add_callback('on_train_epoch_start', on_train_epoch_start)
+    model.add_callback('on_train_batch_end', on_train_batch_end)
     model.add_callback('on_fit_epoch_end', on_fit_epoch_end)
 
     results = model.train(

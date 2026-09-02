@@ -38,6 +38,9 @@ func (h *TrainingHandler) HandleJobs(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
 			return
 		}
+		if jobs == nil {
+			jobs = []*domain.TrainingJob{}
+		}
 		json.NewEncoder(w).Encode(jobs)
 
 	case http.MethodPost:

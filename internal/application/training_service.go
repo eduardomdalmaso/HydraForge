@@ -21,6 +21,8 @@ type TrainingService struct {
 	gpuProvider       ports.GPUProvider
 	metricSubscribers []chan domain.TrainingMetrics
 	recentMetrics     []domain.TrainingMetrics
+	rawLogs           []string
+	activeJob         *domain.TrainingJob
 }
 
 // NewTrainingService initializes a new TrainingService instance.
@@ -32,6 +34,15 @@ func NewTrainingService(
 	worker ports.TrainingWorker,
 	gpuProvider ports.GPUProvider,
 ) *TrainingService {
+	// Clean stale training jobs from prior shutdowns
+	if jobs, err := jobRepo.ListJobs(context.Background(), ""); err == nil {
+		for _, j := range jobs {
+			if j.Status == domain.StatusTraining || j.Status == domain.StatusQueued {
+				_ = jobRepo.UpdateJobStatus(context.Background(), j.JobID, domain.StatusStopped, "Interrupted by server restart")
+			}
+		}
+	}
+
 	return &TrainingService{
 		jobRepo:       jobRepo,
 		datasetRepo:   datasetRepo,
@@ -40,6 +51,7 @@ func NewTrainingService(
 		worker:        worker,
 		gpuProvider:   gpuProvider,
 		recentMetrics: make([]domain.TrainingMetrics, 0, 100),
+		rawLogs:       make([]string, 0, 100),
 	}
 }
 
@@ -60,36 +72,48 @@ func (s *TrainingService) CreateTrainingJob(ctx context.Context, job *domain.Tra
 
 	// Trigger asynchronous training loop via worker port
 	go func(targetJob domain.TrainingJob) {
-		var totalEnergyKWh float64
-		var totalPowerWatts float64
-		var metricCount float64
+		targetJob.Status = domain.StatusTraining
+		_ = s.jobRepo.UpdateJobStatus(context.Background(), targetJob.JobID, domain.StatusTraining, "")
+
+		initLog1 := fmt.Sprintf("[HydraForge] Training Job %s (%s) started on %s", targetJob.JobID, targetJob.ModelArchitecture, targetJob.DatasetID)
+		initLog2 := fmt.Sprintf("[Configuration] Epochs: %d | Batch: %d | ImgSz: %d | Optimizer: %s (lr0=%v)", targetJob.Hyperparameters.Epochs, targetJob.Hyperparameters.BatchSize, targetJob.Hyperparameters.ImageSize, targetJob.Hyperparameters.Optimizer, targetJob.Hyperparameters.LearningRate)
+		s.mu.Lock()
+		s.rawLogs = []string{initLog1, initLog2}
+		s.activeJob = &targetJob
+		s.mu.Unlock()
+
 		var peakVRAM float64
-		var totalDurationSec float64
-		var totalFPS float64
 
 		err := s.worker.StartTraining(context.Background(), &targetJob, func(m domain.TrainingMetrics) {
 			s.mu.Lock()
-			s.recentMetrics = append(s.recentMetrics, m)
-			if len(s.recentMetrics) > 100 {
-				s.recentMetrics = s.recentMetrics[1:]
+			if m.EpochDurationSec > 0 && m.MAP50 > 0 {
+				s.recentMetrics = append(s.recentMetrics, m)
+				if len(s.recentMetrics) > 100 {
+					s.recentMetrics = s.recentMetrics[1:]
+				}
+				if m.MAP50 > targetJob.BestMAP50 {
+					targetJob.BestMAP50 = m.MAP50
+				}
+				logLine := fmt.Sprintf("[Epoch %d/%d] Box Loss: %.3f | Cls: %.3f | mAP50: %.1f%% | %.0f FPS (%.1fs)",
+					m.Epoch, targetJob.Hyperparameters.Epochs, m.BoxLoss, m.ClsLoss, m.MAP50*100.0, m.FPS, m.EpochDurationSec)
+				s.rawLogs = append(s.rawLogs, logLine)
+				if len(s.rawLogs) > 100 {
+					s.rawLogs = s.rawLogs[1:]
+				}
+			} else if targetJob.CurrentBatch > 0 && targetJob.CurrentBatch%50 == 0 {
+				batchLog := fmt.Sprintf("[Batch %d/%d] Loss: %.3f | Power: %.0fW | %.0f FPS (%.1fs)",
+					targetJob.CurrentBatch, targetJob.TotalBatches, m.BoxLoss, m.PowerWatts, m.FPS, m.EpochDurationSec)
+				s.rawLogs = append(s.rawLogs, batchLog)
+				if len(s.rawLogs) > 100 {
+					s.rawLogs = s.rawLogs[1:]
+				}
 			}
-			
-			metricCount++
-			totalPowerWatts += m.PowerWatts
-			totalDurationSec += m.EpochDurationSec
-			totalFPS += m.FPS
+
 			if m.GPUVRAMMB > peakVRAM {
 				peakVRAM = m.GPUVRAMMB
+				targetJob.PeakVRAMMB = peakVRAM
 			}
-			totalEnergyKWh += (m.PowerWatts * (m.EpochDurationSec / 3600.0)) / 1000.0
 
-			targetJob.CurrentEpoch = m.Epoch
-			targetJob.BestMAP50 = m.MAP50
-			targetJob.TotalEnergyKWh = totalEnergyKWh
-			targetJob.AvgPowerWatts = totalPowerWatts / metricCount
-			targetJob.PeakVRAMMB = peakVRAM
-			targetJob.DurationSec = totalDurationSec
-			targetJob.AvgFPS = totalFPS / metricCount
 			_ = s.jobRepo.SaveJob(context.Background(), &targetJob)
 			s.mu.Unlock()
 
@@ -98,8 +122,14 @@ func (s *TrainingService) CreateTrainingJob(ctx context.Context, job *domain.Tra
 
 		if err != nil {
 			_ = s.jobRepo.UpdateJobStatus(context.Background(), targetJob.JobID, domain.StatusFailed, err.Error())
+			s.mu.Lock()
+			s.rawLogs = append(s.rawLogs, fmt.Sprintf("[FAILED] Training aborted: %s", err.Error()))
+			s.mu.Unlock()
 		} else {
 			_ = s.jobRepo.UpdateJobStatus(context.Background(), targetJob.JobID, domain.StatusCompleted, "")
+			s.mu.Lock()
+			s.rawLogs = append(s.rawLogs, fmt.Sprintf("[SUCCESS] Training run %s completed. Weights best.pt saved.", targetJob.JobID))
+			s.mu.Unlock()
 		}
 	}(*job)
 
@@ -199,17 +229,25 @@ func (s *TrainingService) GetCockpitTelemetry(ctx context.Context) (*domain.Cock
 
 	jobs, _ := s.jobRepo.ListJobs(ctx, "")
 	activeCount := 0
+	s.mu.RLock()
 	var activeJob *domain.TrainingJob
-	for _, j := range jobs {
-		if j.Status == domain.StatusTraining {
-			activeCount++
-			activeJob = j
+	if s.activeJob != nil && s.activeJob.Status == domain.StatusTraining {
+		jobCopy := *s.activeJob
+		activeJob = &jobCopy
+		activeCount = 1
+	} else {
+		for _, j := range jobs {
+			if j.Status == domain.StatusTraining {
+				activeCount++
+				activeJob = j
+			}
 		}
 	}
 
-	s.mu.RLock()
 	metricsCopy := make([]domain.TrainingMetrics, len(s.recentMetrics))
 	copy(metricsCopy, s.recentMetrics)
+	logsCopy := make([]string, len(s.rawLogs))
+	copy(logsCopy, s.rawLogs)
 	s.mu.RUnlock()
 
 	return &domain.CockpitTelemetry{
@@ -218,6 +256,7 @@ func (s *TrainingService) GetCockpitTelemetry(ctx context.Context) (*domain.Cock
 		GPUStats:           *gpu,
 		ActiveJob:          activeJob,
 		RecentMetrics:      metricsCopy,
+		RawLogs:            logsCopy,
 	}, nil
 }
 

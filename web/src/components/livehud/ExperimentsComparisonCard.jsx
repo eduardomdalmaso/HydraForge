@@ -30,10 +30,10 @@ export default function ExperimentsComparisonCard({ jobs = [], onTestInPlaygroun
                 >
                   <div>
                     <div style={{ fontFamily: 'var(--font-oxanium)', fontSize: '0.85rem', fontWeight: '700', color: isSelected ? 'var(--cb-yellow)' : '#fff' }}>
-                      {run.model} ({run.dataset_id})
+                      {run.model_architecture || run.model} ({run.dataset_id})
                     </div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.2rem' }}>
-                      mAP: <strong style={{ color: 'var(--cb-green)' }}>{(mapVal * 100).toFixed(1)}%</strong> • {run.epochs} Épocas
+                      mAP: <strong style={{ color: 'var(--cb-green)' }}>{(mapVal * 100).toFixed(1)}%</strong> • {run.hyperparameters?.epochs || run.total_epochs || 50} Épocas
                     </div>
                   </div>
                   <span className={run.status === 'COMPLETED' ? 'badge-online' : 'badge-cyan'} style={{ fontSize: '0.65rem' }}>
@@ -49,36 +49,36 @@ export default function ExperimentsComparisonCard({ jobs = [], onTestInPlaygroun
               <div className="matrix-cell highlight">
                 <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>mAP@50-95</div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: '700', color: 'var(--cb-green)' }}>
-                  {activeRun.metrics?.map50_95 ? `${(activeRun.metrics.map50_95 * 100).toFixed(1)}%` : 'PENDING'}
+                  {activeRun.best_map50 ? `${(activeRun.best_map50 * 100).toFixed(1)}%` : 'PENDING'}
                 </div>
               </div>
               <div className="matrix-cell">
                 <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>OPTIMIZER / LR0</div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: '700', color: 'var(--cb-cyan)' }}>
-                  {activeRun.optimizer || 'AdamW'} ({activeRun.lr0 || 0.001})
+                  {activeRun.hyperparameters?.optimizer || 'AdamW'} ({activeRun.hyperparameters?.lr0 || 0.001})
                 </div>
               </div>
               <div className="matrix-cell">
                 <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>RESOLUTION</div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: '700', color: 'var(--cb-yellow)' }}>
-                  {activeRun.img_size || 640} px
+                  {activeRun.hyperparameters?.imgsz || 640} px
                 </div>
               </div>
               <div className="matrix-cell">
                 <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>BATCH SIZE</div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: '700', color: '#fff' }}>
-                  {activeRun.batch_size || 32}
+                  {activeRun.hyperparameters?.batch_size || 32}
                 </div>
               </div>
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="cyber-pill active" style={{ flex: 1, padding: '0.6rem', textAlign: 'center' }} onClick={() => onTestInPlayground(activeRun)}>
-              👁️ TEST WEIGHTS (.PT) IN PLAYGROUND →
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+            <button className="cyber-action-btn" style={{ width: '100%', padding: '0.75rem' }} onClick={() => onTestInPlayground(activeRun)}>
+              PLAYGROUND
             </button>
-            <button className="cyber-pill" style={{ flex: 1, padding: '0.6rem', textAlign: 'center' }} onClick={() => window.location.hash = 'benchmarks'}>
-              ⚡ EXPORT TO TENSORRT →
+            <button className="cyber-action-btn secondary" style={{ width: '100%', padding: '0.75rem' }} onClick={() => window.location.hash = 'benchmarks'}>
+              EXPORT
             </button>
           </div>
         </>
