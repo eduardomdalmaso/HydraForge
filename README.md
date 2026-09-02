@@ -119,6 +119,15 @@ make build
 
 ---
 
+## Roadmap
+
+- [ ] **Quantization-Aware Training (QAT) Engine:** Fine-tuning loop emulating INT8/FP8 quantization noise during training for zero-accuracy-loss edge deployment on NVIDIA TensorRT and edge NPUs.
+- [ ] **Interactive Confusion Matrix & Class Diagnostics:** In-HUD drawer for granular per-class precision, recall, and F1-confidence curve optimization.
+- [ ] **Overfitting Early-Warning Sentinel:** Real-time heuristic anomaly detection alerting on validation loss divergence.
+- [ ] **HydraVault Active Learning Pipeline:** 1-click dataset synchronization with [HydraVault](https://github.com/eduardomdalmaso/HydraVault) for automated hard-negative retraining.
+
+---
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).

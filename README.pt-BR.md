@@ -119,6 +119,15 @@ make build
 
 ---
 
+## Roadmap
+
+- [ ] **Motor de Quantization-Aware Training (QAT):** Loop de fine-tuning simulando ruído de quantização INT8/FP8 durante o treino para deploy com 0% de perda de precisão no TensorRT e NPUs de borda.
+- [ ] **Matriz de Confusão Interativa & Diagnóstico por Classe:** Visualizador integrado no HUD para inspeção granular de precisão, recall e curva ótima de F1-Score.
+- [ ] **Sentinela de Alerta Precoce de Overfitting:** Detecção heurística em tempo real de divergência na perda de validação.
+- [ ] **Pipeline de Active Learning com HydraVault:** Sincronização em 1 clique com o [HydraVault](https://github.com/eduardomdalmaso/HydraVault) para retreino automático com hard-negatives.
+
+---
+
 ## Licença
 
 Este projeto está licenciado sob a [Licença MIT](LICENSE).
