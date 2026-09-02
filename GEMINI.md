@@ -21,6 +21,7 @@ hydrastream / hydraforge
 │           ├── ingest/           # Adaptador RFC 2326 RTSP / TCP RTP
 │           ├── gpu/              # Detector de hardware GPU (NVIDIA RTX 5090 / CUDA 13.3)
 │           ├── memory/           # Repositório thread-safe em memória
+│           ├── sqlite/           # Repositório persistente SQLite (Modo WAL)
 │           ├── worker/           # IPC e controle de processos de treinamento
 │           └── shm/              # Gerenciador de memória compartilhada POSIX (/dev/shm)
 ├── crates/hydra-engine/          # Motor Data Plane em Rust (Lock-free Ring Buffer & Governor)

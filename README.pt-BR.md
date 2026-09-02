@@ -1,6 +1,6 @@
 # HydraForge
 
-> **Estúdio de Alta Performance com Interface Cyberpunk para Treinamento de Modelos YOLOv8, YOLO11 e YOLO26 com Go, PyTorch/CUDA 13.3 e React com Exportação 1-Clique para TensorRT.**
+> **Estúdio de Alta Performance com Interface Cyberpunk para Treinamento de Modelos YOLOv8, YOLO11 e YOLO26 com Go, PyTorch/CUDA 13.3, Telemetria Intra-Época em Tempo Real e Exportação 1-Clique para TensorRT.**
 
 [**English**](README.md) | [**Português do Brasil**]
 
@@ -19,7 +19,7 @@
 Treinar, ajustar e otimizar modelos YOLO de visão computacional para produção em edge geralmente envolve ferramentas fragmentadas:
 
 1. **Scripts CLI Desconectados:** Orquestração manual de arquivos `data.yaml`, cálculo de batch size e curvas de learning rate via flags de terminal sujeitas a erros.
-2. **Monitoramento Isolado:** Dependência de plataformas SaaS pesadas que adicionam latência e não possuem telemetria direta do hardware GPU (VRAM, carga dos Tensor Cores, temperatura).
+2. **Monitoramento com Atraso:** Plataformas tradicionais só reportam métricas ao final de cada época, deixando o operador no escuro durante longos períodos (70+ segundos) em datasets volumosos.
 3. **Compilação e Exportação Complexa:** Converter checkpoints PyTorch `.pt` em motores **TensorRT (`.engine`)** otimizados em FP16/INT8 exige toolchains complexas em C++.
 
 ---
@@ -29,9 +29,10 @@ Treinar, ajustar e otimizar modelos YOLO de visão computacional para produção
 O **HydraForge** fornece um **Cockpit de Treinamento e Estúdio de Compilação de Modelos de IA** completo e integrado:
 
 - **Suporte Nativo a YOLOv8, YOLO11 e YOLO26:** Matriz completa de arquiteturas cobrindo **Nano (n)**, **Small (s)**, **Medium (m)**, **Large (l)** e **XLarge (x)** em tarefas de **Detecção**, **Segmentação**, **Pose**, **Classificação** e **OBB (Caixas Orientadas)**.
-- **Go Control Plane + Worker Python CUDA:** Servidor em Go de alta concorrência (:8081) gerenciando filas de jobs e WebSockets, integrado ao Worker Python PyTorch/CUDA 13.3 acelerado na **NVIDIA GeForce RTX 5090 (32GB VRAM)**.
-- **HUD Cyberpunk em Tempo Real:** Curvas SVG Bézier ao vivo para funções de loss (`box_loss`, `cls_loss`, `dfl_loss`), métricas de precisão (`mAP@50`, `mAP@50-95`) e sensores de hardware (VRAM, Tensor Cores, Watts).
-- **Dataset Studio & Matriz de Classes:** Validação de `data.yaml`, galeria de visualização de anotações e gráfico de barras para detecção prévia de classes desbalanceadas.
+- **Go Control Plane + Worker Python CUDA:** Servidor em Go de alta concorrência (`:8081`) gerenciando filas de jobs e WebSockets, integrado ao Worker Python PyTorch/CUDA 13.3 acelerado na **NVIDIA GeForce RTX 5090 (32GB VRAM)**.
+- **Streaming Contínuo Intra-Época:** Emissão de telemetria a cada 2–5 batches (~150ms) rastreando progresso de lotes, orçamento de energia integrado ($kWh$) e throughput de treino ($FPS$).
+- **Barras Duplas de Progresso & Controles de Ciclo de Vida:** Barra da **Época Atual (0–100%)** e Barra da **Sessão Total**, com ações imediatas de **ABORT**, **RESTART** e **RESUME**.
+- **Ciclo Automático Multi-GPU:** Soma a VRAM total do cluster e alterna a cada 3 segundos a leitura individual dos sensores de temperatura, watts e carga de cada GPU.
 - **Exportação 1-Clique para TensorRT e ONNX:** Converte modelos treinados diretamente em arquivos **TensorRT `.engine`** de altíssimo throughput para inferência no [HydraStream](https://github.com/eduardomdalmaso/HydraStream).
 
 ---
@@ -40,9 +41,9 @@ O **HydraForge** fornece um **Cockpit de Treinamento e Estúdio de Compilação 
 
 ```mermaid
 flowchart TD
-    subgraph Frontend [React SPA + CSS Cyberpunk]
+    subgraph Frontend [React SPA + Design System Cyberpunk]
         UI_Cockpit[Cockpit de Treinamento & Lançador de Hiperparâmetros]
-        UI_LiveHUD[Curvas ao Vivo: mAP50, Box/Cls Loss, VRAM]
+        UI_LiveHUD[Barras Duplas ao Vivo, Gráficos Loss/mAP, HUD GPU]
         UI_Datasets[Dataset Studio & Visualizador de Anotações]
         UI_Export["Model Zoo & Exportador 1-Clique TensorRT / ONNX"]
     end
@@ -50,28 +51,29 @@ flowchart TD
     subgraph GoControlPlane [Go Control Plane Engine :8081]
         RESTRouter[REST API: /api/v1/training/*]
         WSHub[Hub WebSockets de Telemetria]
-        JobQueue[Fila de Jobs & Máquina de Estados]
-        ArtifactsDB[Registro de Checkpoints & Datasets]
+        JobQueue[Fila de Jobs & Estado Ativo em Memória]
+        SQLiteDB[Banco de Dados SQLite em Modo WAL]
     end
 
     subgraph PythonWorker [Worker Python PyTorch Training]
         Trainer[Motor Ultralytics YOLOv8 / YOLO11 / YOLO26]
         PyTorchCUDA["PyTorch 2.x + CUDA 13.3 (RTX 5090 32GB)"]
-        Callbacks[Callbacks por Época & Emissor de Métricas]
+        BatchCallback["on_train_batch_end: FPS, kWh e Loss Intra-Batch"]
+        EpochCallback["on_fit_epoch_end: mAP50, Precision, Recall"]
         Exporter[Exportador TensorRT FP8/FP16 & ONNX]
     end
 
-    Frontend <-->|REST & WebSockets| GoControlPlane
-    GoControlPlane <-->|IPC & Controle de Processos| PythonWorker
-    PythonWorker -->|Transmite loss, mAP, métricas GPU| GoControlPlane
-    GoControlPlane -->|Broadcast de telemetria| Frontend
+    Frontend <-->|Polling REST & WebSockets| GoControlPlane
+    GoControlPlane <-->|IPC Controle de Processos & Scanner| PythonWorker
+    PythonWorker -->|Transmite HYDRA_BATCH & HYDRA_METRIC| GoControlPlane
+    GoControlPlane -->|Persiste & Broadcast de Telemetria| Frontend
 ```
 
 ---
 
 ## Páginas Principais
 
-```
+```text
 ┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                  HYDRAFORGE - PÁGINAS DO PROJETO                                  │
 ├───────────────┬─────────────────┬──────────────────┬──────────────────┬─────────────────┬─────────┤
@@ -80,12 +82,20 @@ flowchart TD
 └───────────────┴─────────────────┴──────────────────┴──────────────────┴─────────────────┴─────────┘
 ```
 
-1. **Cockpit de Treinamento (`#cockpit`):** Seletor de modelo, tarefa, optimizer (`AdamW`, `SGD`, `RMSprop`), Cosine LR, switches AMP FP16/BF16 e estimativa de VRAM.
-2. **Live Training HUD (`#live-hud`):** Curvas de loss e mAP em tempo real, galeria visual de predições por época e monitor de hardware da RTX 5090.
+1. **Cockpit de Treinamento (`#cockpit`):** Seletor de modelo, tarefa, optimizer (`AdamW`, `SGD`), switches AMP FP16/BF16, ajuste two-stage fine-tuning e estimativa dinâmica de VRAM.
+2. **Live Training HUD (`#live-hud`):** Barras duplas de progresso (Época e Sessão), cálculo em tempo real de energia ($kWh$) e velocidade ($FPS$), gráficos vetoriais de loss/mAP, logs do terminal e monitor de hardware GPU.
 3. **Benchmark Studio (`#benchmarks`):** Suite de testes de benchmark Ultralytics multi-formato (TensorRT vs ONNX vs PyTorch) com gráfico de throughput e matriz de speedup.
-4. **Dataset Studio (`#datasets`):** Validação de `data.yaml`, sliders de split treino/val/teste e gráfico de barras de frequência de classes.
-5. **Model Zoo & Exportador (`#model-zoo`):** Comparação de checkpoints (`best.pt` vs `last.pt`) e compilação em 1 clique para **TensorRT (`.engine`)**.
+4. **Dataset Studio (`#datasets`):** Validação de `data.yaml`, sliders de split treino/val/teste, gráfico de distribuição de classes e visualizador de caixas delimitadoras.
+5. **Model Zoo & Exportador (`#model-zoo`):** Repositório de modelos oficiais e customizados, comparação de checkpoints (`best.pt` vs `last.pt`) e compilação em 1 clique para **TensorRT (`.engine`)**.
 6. **Playground de Inferência (`#playground`):** Teste de imagens e vídeos com sliders de confiança e IoU em tempo real.
+
+---
+
+## Diretrizes de Engenharia e Modularidade Estrita
+
+- **Arquitetura Hexagonal (DDD):** Lógica de negócio pura em `internal/domain/` sem dependências de rede/HTTP.
+- **Frontend Modular:** Limite estrito de **`< 100 linhas por arquivo`** em todos os arquivos CSS, JS e JSX de `web/`.
+- **Aceleração de Hardware:** PyTorch nativo com CUDA 13.3 (suporte à arquitetura Blackwell `sm_120` na RTX 5090).
 
 ---
 

@@ -1,6 +1,6 @@
 # HydraForge
 
-> **High-Performance Cyberpunk-themed AI Training Studio for YOLOv8, YOLO11, and YOLO26. Built with Go Control Plane, PyTorch/CUDA 13.3 Worker, and React SPA with 1-Click TensorRT Export.**
+> **High-Performance Cyberpunk-themed AI Training Studio for YOLOv8, YOLO11, and YOLO26. Built with Go Control Plane, PyTorch/CUDA 13.3 Worker, Real-Time Intra-Epoch Telemetry, and React SPA with 1-Click TensorRT Export.**
 
 [**English**] | [**Português do Brasil**](README.pt-BR.md)
 
@@ -19,7 +19,7 @@
 Training, fine-tuning, and optimizing state-of-the-art YOLO computer vision models for production edge deployments is typically hindered by fragmented tooling:
 
 1. **Scattered CLI Scripts & Fragile Workflows:** Manual orchestration of dataset formatting (`data.yaml`), batch sizing, and learning rate scheduling across CLI flags.
-2. **Disconnected Monitoring:** Relying on heavy external SaaS tracking platforms that introduce latency and lack direct GPU hardware telemetry (VRAM, Tensor Core load, temperature).
+2. **Disconnected Monitoring & Delayed Telemetry:** Most platforms only report metrics at epoch boundaries, leaving operators blind during long 70+ second epochs on large datasets.
 3. **Complex Model Compilation & Export:** Converting raw PyTorch `.pt` checkpoints into optimized **TensorRT (`.engine`)** with mixed precision (FP16/FP8/INT8) requires error-prone C++ toolchains and manual TensorRT engine building.
 
 ---
@@ -29,9 +29,10 @@ Training, fine-tuning, and optimizing state-of-the-art YOLO computer vision mode
 **HydraForge** provides an all-in-one, high-performance **AI Model Training Cockpit & Compilation Studio**:
 
 - **Native YOLOv8, YOLO11 & YOLO26 Support:** Full architecture matrix covering **Nano (n)**, **Small (s)**, **Medium (m)**, **Large (l)**, and **XLarge (x)** models across **Detection**, **Segmentation**, **Pose**, **Classification**, and **OBB (Oriented Bounding Box)** tasks.
-- **Go Control Plane + Python CUDA Worker:** High-concurrency Go server (:8081) managing the training queue and broadcasting live WebSockets telemetry, backed by an isolated Python PyTorch/CUDA 13.3 worker executing directly on the **NVIDIA GeForce RTX 5090 (32GB VRAM)**.
-- **Real-Time Cyberpunk HUD:** Live SVG Bézier curves for loss functions (`box_loss`, `cls_loss`, `dfl_loss`), precision metrics (`mAP@50`, `mAP@50-95`), and hardware sensors (VRAM usage, Tensor Cores, Watts).
-- **Dataset Studio & Class Balance Matrix:** Ingests local datasets or `data.yaml`, inspects bounding boxes visually, and detects dataset class imbalance before training.
+- **Go Control Plane + Python CUDA Worker:** High-concurrency Go server (`:8081`) managing the training queue and broadcasting live WebSockets/REST telemetry, backed by an isolated Python PyTorch/CUDA 13.3 worker executing directly on the **NVIDIA GeForce RTX 5090 (32GB VRAM)**.
+- **Intra-Epoch Batch Streaming:** Live telemetry emitted every 2–5 batches (~150ms) tracking fractional progress, real-time milliwatt energy integration ($kWh$), and train throughput ($FPS$).
+- **Dual Progress & Lifecycle Controls:** Independent bars for **Current Epoch Progress (0–100%)** and **Total Session Progress**, with instant **ABORT**, **RESTART**, and **RESUME** actions.
+- **Multi-GPU Telemetry Cycler:** Aggregates total cluster VRAM while automatically cycling between individual device sensors (Temp, Watts, SM load) every 3 seconds.
 - **1-Click TensorRT & ONNX Exporter:** Compiles completed training runs directly into high-throughput **TensorRT `.engine`** files optimized for sub-millisecond edge inference in [HydraStream](https://github.com/eduardomdalmaso/HydraStream).
 
 ---
@@ -40,9 +41,9 @@ Training, fine-tuning, and optimizing state-of-the-art YOLO computer vision mode
 
 ```mermaid
 flowchart TD
-    subgraph Frontend [React SPA + Cyberpunk CSS]
+    subgraph Frontend [React SPA + Cyberpunk CSS Design System]
         UI_Cockpit[Training Cockpit & Hyperparameter Launcher]
-        UI_LiveHUD["Live Training Curves: mAP50, Box/Cls Loss, VRAM"]
+        UI_LiveHUD["Live Dual Progress Bars, Loss/mAP Charts, GPU HUD"]
         UI_Datasets[Dataset Studio & Annotation Viewer]
         UI_Export["Model Zoo & 1-Click TensorRT / ONNX Exporter"]
     end
@@ -50,28 +51,29 @@ flowchart TD
     subgraph GoControlPlane [Go Control Plane Engine :8081]
         RESTRouter[REST API: /api/v1/training/*]
         WSHub[WebSockets Telemetry Hub]
-        JobQueue[Training Job Queue & State Machine]
-        ArtifactsDB[Model Checkpoint & Dataset Registry]
+        JobQueue[Training Job Queue & In-Memory Active Job State]
+        SQLiteDB[SQLite Database in WAL Mode]
     end
 
     subgraph PythonWorker [Python PyTorch Training Worker]
         Trainer[Ultralytics Engine YOLOv8 / YOLO11 / YOLO26]
         PyTorchCUDA["PyTorch 2.x + CUDA 13.3 (RTX 5090 32GB)"]
-        Callbacks[Epoch Callback & Metric Emitter]
+        BatchCallback["on_train_batch_end: Intra-Batch FPS, kWh & Loss"]
+        EpochCallback["on_fit_epoch_end: mAP50, Precision, Recall"]
         Exporter[TensorRT FP8/FP16 & ONNX Precision Exporter]
     end
 
-    Frontend <-->|REST & WebSockets| GoControlPlane
-    GoControlPlane <-->|IPC & Process Control| PythonWorker
-    PythonWorker -->|Streams loss, mAP, GPU metrics| GoControlPlane
-    GoControlPlane -->|Broadcasts live telemetry| Frontend
+    Frontend <-->|REST Polling & WebSockets| GoControlPlane
+    GoControlPlane <-->|IPC Process Control & Scanner| PythonWorker
+    PythonWorker -->|Streams HYDRA_BATCH & HYDRA_METRIC| GoControlPlane
+    GoControlPlane -->|Persists & Broadcasts Live Telemetry| Frontend
 ```
 
 ---
 
 ## Key Studio Views
 
-```
+```text
 ┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                     HYDRAFORGE - STUDIO VIEWS                                     │
 ├───────────────┬─────────────────┬──────────────────┬──────────────────┬─────────────────┬─────────┤
@@ -80,12 +82,20 @@ flowchart TD
 └───────────────┴─────────────────┴──────────────────┴──────────────────┴─────────────────┴─────────┘
 ```
 
-1. **Training Cockpit (`#cockpit`):** Model architecture selector, task variant picker, optimizer selection (`AdamW`, `SGD`, `RMSprop`), Cosine LR scheduling, AMP FP16/BF16 toggles, and dynamic VRAM estimation.
-2. **Live Training HUD (`#live-hud`):** Real-time loss and mAP curves, visual validation gallery with predicted bounding boxes per epoch, and RTX 5090 GPU hardware monitors.
+1. **Training Cockpit (`#cockpit`):** Model architecture selector, task variant picker, optimizer selection (`AdamW`, `SGD`), AMP FP16/BF16 toggles, two-stage fine-tuning switches, and dynamic VRAM estimation.
+2. **Live Training HUD (`#live-hud`):** Dual progress bars (Epoch & Session), real-time energy budget ($kWh$), train throughput ($FPS$), vector loss/mAP charts, live PyTorch terminal logs, and multi-GPU sensor cycling.
 3. **Benchmark Studio (`#benchmarks`):** Ultralytics multi-format benchmark launcher with live throughput comparison charts and speedup multipliers.
-4. **Dataset Studio (`#datasets`):** `data.yaml` validation, train/val/test split sliders, and class distribution frequency bar chart.
-5. **Model Zoo & Exporter (`#model-zoo`):** Checkpoint comparison (`best.pt` vs `last.pt`), size vs mAP trade-off matrix, and 1-click **TensorRT (`.engine`)** compilation.
+4. **Dataset Studio (`#datasets`):** `data.yaml` validation, train/val/test split sliders, class distribution frequency bar chart, and integrated bounding-box visualizer.
+5. **Model Zoo & Exporter (`#model-zoo`):** Checkpoint comparison (`best.pt` vs `last.pt`), size vs mAP trade-off matrix, official & custom model repository, and 1-click **TensorRT (`.engine`)** compilation.
 6. **Inference Playground (`#playground`):** Drag-and-drop image/video testing with real-time confidence and IoU threshold sliders.
+
+---
+
+## Engineering Guidelines & Strict Modularity
+
+- **Hexagonal Architecture (DDD):** Pure domain logic in `internal/domain/` with zero HTTP/network dependencies.
+- **Modular Frontend:** Strict `<100 lines per file` rule across all CSS, JS, and JSX files in `web/`.
+- **Hardware Acceleration:** Native PyTorch with CUDA 13.3 (`sm_120` Blackwell support on RTX 5090).
 
 ---
 
