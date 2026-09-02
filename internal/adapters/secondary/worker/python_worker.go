@@ -56,7 +56,16 @@ func (w *PythonWorker) StartTraining(ctx context.Context, job *domain.TrainingJo
 
 	yamlPath := job.DatasetPath
 	if yamlPath == "" {
-		yamlPath = filepath.Join("/home/hades/datasets", job.DatasetID, "data.yaml")
+		cand1 := filepath.Join("/home/hades/Documents/HydraForge/datasets", job.DatasetID, "data.yaml")
+		cand2 := filepath.Join("datasets", job.DatasetID, "data.yaml")
+		cand3 := filepath.Join("/home/hades/datasets", job.DatasetID, "data.yaml")
+		if _, err := os.Stat(cand1); err == nil {
+			yamlPath = cand1
+		} else if _, err := os.Stat(cand2); err == nil {
+			yamlPath = cand2
+		} else {
+			yamlPath = cand3
+		}
 	}
 
 	scriptPath := "/home/hades/Documents/HydraForge/worker_python/train.py"

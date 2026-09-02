@@ -20,7 +20,10 @@ func main() {
 	log.Println("🚀 [HydraForge] Initializing YOLO AI Training Studio (Hexagonal Architecture + DDD)...")
 
 	// 1. Initialize Persistent Secondary Adapters (Driven)
-	dbPath := "/home/hades/datasets/hydraforge.db"
+	dbPath := "/home/hades/Documents/HydraForge/datasets/hydraforge.db"
+	if _, err := os.Stat("datasets/hydraforge.db"); err == nil {
+		dbPath = "datasets/hydraforge.db"
+	}
 	sqlStore, err := sqlite.NewSQLiteStore(dbPath)
 	if err != nil {
 		log.Fatalf("❌ Failed to initialize SQLite store: %v", err)

@@ -133,10 +133,16 @@ func (h *TrainingHandler) HandleDatasetAudit(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	dsDir := filepath.Join("/home/hades/datasets", id)
+	dsDir := filepath.Join("/home/hades/Documents/HydraForge/datasets", id)
 	if _, err := os.Stat(dsDir); err != nil {
-		http.Error(w, `{"error":"dataset directory not found on disk"}`, http.StatusNotFound)
-		return
+		dsDir = filepath.Join("datasets", id)
+		if _, err := os.Stat(dsDir); err != nil {
+			dsDir = filepath.Join("/home/hades/datasets", id)
+			if _, err := os.Stat(dsDir); err != nil {
+				http.Error(w, `{"error":"dataset directory not found on disk"}`, http.StatusNotFound)
+				return
+			}
+		}
 	}
 
 	// Real scan of labels

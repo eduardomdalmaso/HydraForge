@@ -31,14 +31,18 @@ func NewMemoryStore() *MemoryStore {
 		benchmarks:  make(map[string]*domain.BenchmarkJob),
 	}
 
-	// Auto-discover existing datasets in /home/hades/datasets
-	datasetsDir := "/home/hades/datasets"
-	if entries, err := os.ReadDir(datasetsDir); err == nil {
-		for _, entry := range entries {
-			if entry.IsDir() {
-				id := entry.Name()
-				yamlPath := filepath.Join(datasetsDir, id, "data.yaml")
-				if _, err := os.Stat(yamlPath); err == nil {
+	// Auto-discover existing datasets
+	datasetsDirs := []string{"/home/hades/Documents/HydraForge/datasets", "datasets", "/home/hades/datasets"}
+	for _, datasetsDir := range datasetsDirs {
+		if entries, err := os.ReadDir(datasetsDir); err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					id := entry.Name()
+					yamlPath := filepath.Join(datasetsDir, id, "data.yaml")
+					if _, err := os.Stat(yamlPath); err == nil {
+						if _, exists := store.datasets[id]; exists {
+							continue
+						}
 					// Count images
 					trainCount := countDirFiles(filepath.Join(datasetsDir, id, "train", "images"))
 					valCount := countDirFiles(filepath.Join(datasetsDir, id, "valid", "images"))
@@ -64,6 +68,7 @@ func NewMemoryStore() *MemoryStore {
 				}
 			}
 		}
+	}
 	}
 
 	return store

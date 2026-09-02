@@ -29,18 +29,37 @@ def main():
     parser.add_argument('--job-id', type=str, default='run_1')
     args = parser.parse_args()
 
-    project_dir = os.path.expanduser('~/runs/train')
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    project_dir = os.path.join(base_dir, 'runs', 'train')
     os.makedirs(project_dir, exist_ok=True)
 
     # Resolve model weights path
     model_name = args.model
-    if not model_name.endswith('.pt'):
+    if not model_name.endswith('.pt') and not model_name.endswith('.yaml'):
         model_name += '.pt'
 
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    weights_path = os.path.join(base_dir, 'weights', os.path.basename(model_name))
+    
+    if os.path.isabs(model_name) and os.path.exists(model_name):
+        model_target = model_name
+    elif os.path.exists(weights_path):
+        model_target = weights_path
+    elif os.path.exists(model_name):
+        model_target = model_name
+    elif os.path.exists(os.path.join('weights', model_name)):
+        model_target = os.path.join('weights', model_name)
+    else:
+        model_target = model_name
+
     try:
-        model = YOLO(model_name)
+        model = YOLO(model_target)
     except Exception:
-        model = YOLO('yolov8n.pt')
+        fallback = os.path.join(base_dir, 'weights', 'yolo26n.pt')
+        if os.path.exists(fallback):
+            model = YOLO(fallback)
+        else:
+            model = YOLO('yolov8n.pt')
 
     epoch_timer = [time.time()]
     batch_in_epoch = [0]

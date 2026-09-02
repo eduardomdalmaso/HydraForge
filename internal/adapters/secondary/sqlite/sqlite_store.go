@@ -38,7 +38,11 @@ func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 		return nil, err
 	}
 
-	store.autoDiscoverDatasets("/home/hades/datasets")
+	store.autoDiscoverDatasets("/home/hades/Documents/HydraForge/datasets")
+	store.autoDiscoverDatasets("datasets")
+	if _, err := os.Stat("/home/hades/datasets"); err == nil {
+		store.autoDiscoverDatasets("/home/hades/datasets")
+	}
 	return store, nil
 }
 
