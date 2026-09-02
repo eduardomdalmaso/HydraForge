@@ -26,6 +26,11 @@ def run_benchmark(model: str, data: str, imgsz: int, quantize: int, device: str,
 
     fmt_param = format_name if format_name else ""
 
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    weights_path = os.path.join(base_dir, 'weights', os.path.basename(model))
+    if not os.path.isabs(model) and os.path.exists(weights_path):
+        model = weights_path
+
     try:
         results_df = benchmark(
             model=model,

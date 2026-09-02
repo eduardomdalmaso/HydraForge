@@ -73,9 +73,20 @@ func (w *PythonWorker) StartTraining(ctx context.Context, job *domain.TrainingJo
 		scriptPath = "worker_python/train.py"
 	}
 
+	modelArg := job.ModelArchitecture
+	if !strings.HasSuffix(modelArg, ".pt") && !strings.HasSuffix(modelArg, ".yaml") {
+		modelArg += ".pt"
+	}
+	weightsCand := filepath.Join("/home/hades/Documents/HydraForge/weights", filepath.Base(modelArg))
+	if _, err := os.Stat(weightsCand); err == nil {
+		modelArg = weightsCand
+	} else if _, err := os.Stat(filepath.Join("weights", filepath.Base(modelArg))); err == nil {
+		modelArg = filepath.Join("weights", filepath.Base(modelArg))
+	}
+
 	args := []string{
 		scriptPath,
-		"--model", job.ModelArchitecture,
+		"--model", modelArg,
 		"--data", yamlPath,
 		"--epochs", strconv.Itoa(job.Hyperparameters.Epochs),
 		"--batch", strconv.Itoa(job.Hyperparameters.BatchSize),

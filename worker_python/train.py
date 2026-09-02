@@ -3,6 +3,7 @@ import json
 import argparse
 import os
 import time
+import shutil
 import torch
 from ultralytics import YOLO
 
@@ -33,33 +34,46 @@ def main():
     project_dir = os.path.join(base_dir, 'runs', 'train')
     os.makedirs(project_dir, exist_ok=True)
 
-    # Resolve model weights path
+    # Resolve model weights path to always target weights/ directory
     model_name = args.model
     if not model_name.endswith('.pt') and not model_name.endswith('.yaml'):
         model_name += '.pt'
 
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    weights_path = os.path.join(base_dir, 'weights', os.path.basename(model_name))
+    weights_dir = os.path.join(base_dir, 'weights')
+    os.makedirs(weights_dir, exist_ok=True)
+    weights_path = os.path.join(weights_dir, os.path.basename(model_name))
     
     if os.path.isabs(model_name) and os.path.exists(model_name):
         model_target = model_name
     elif os.path.exists(weights_path):
         model_target = weights_path
     elif os.path.exists(model_name):
-        model_target = model_name
-    elif os.path.exists(os.path.join('weights', model_name)):
-        model_target = os.path.join('weights', model_name)
+        try:
+            shutil.move(model_name, weights_path)
+            model_target = weights_path
+        except Exception:
+            model_target = model_name
     else:
-        model_target = model_name
+        model_target = weights_path
 
     try:
         model = YOLO(model_target)
     except Exception:
-        fallback = os.path.join(base_dir, 'weights', 'yolo26n.pt')
+        fallback = os.path.join(weights_dir, 'yolo26n.pt')
         if os.path.exists(fallback):
             model = YOLO(fallback)
         else:
             model = YOLO('yolov8n.pt')
+
+    # If Ultralytics downloaded weights to current directory, relocate immediately to weights/
+    cwd_model = os.path.join(os.getcwd(), os.path.basename(model_name))
+    if os.path.exists(cwd_model) and os.path.isfile(cwd_model):
+        try:
+            if not os.path.samefile(cwd_model, weights_path):
+                shutil.move(cwd_model, weights_path)
+        except Exception:
+            pass
 
     epoch_timer = [time.time()]
     batch_in_epoch = [0]
