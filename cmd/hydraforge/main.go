@@ -11,7 +11,7 @@ import (
 
 	primaryHttp "hydraforge/internal/adapters/primary/http"
 	"hydraforge/internal/adapters/secondary/gpu"
-	"hydraforge/internal/adapters/secondary/memory"
+	"hydraforge/internal/adapters/secondary/sqlite"
 	"hydraforge/internal/adapters/secondary/worker"
 	"hydraforge/internal/application"
 )
@@ -19,8 +19,14 @@ import (
 func main() {
 	log.Println("🚀 [HydraForge] Initializing YOLO AI Training Studio (Hexagonal Architecture + DDD)...")
 
-	// 1. Initialize Secondary Adapters (Driven)
-	memStore := memory.NewMemoryStore()
+	// 1. Initialize Persistent Secondary Adapters (Driven)
+	dbPath := "/home/hades/datasets/hydraforge.db"
+	sqlStore, err := sqlite.NewSQLiteStore(dbPath)
+	if err != nil {
+		log.Fatalf("❌ Failed to initialize SQLite store: %v", err)
+	}
+	log.Printf("💾 [HydraForge] SQLite Database initialized at %s (WAL Mode)", dbPath)
+
 	gpuDetector := gpu.NewDetector()
 	pyWorker := worker.NewPythonWorker()
 
@@ -31,7 +37,7 @@ func main() {
 	}
 
 	// 3. Initialize Application Service (Use Case)
-	trainingService := application.NewTrainingService(memStore, memStore, memStore, memStore, pyWorker, gpuDetector)
+	trainingService := application.NewTrainingService(sqlStore, sqlStore, sqlStore, sqlStore, pyWorker, gpuDetector)
 
 
 	// 4. Initialize Primary HTTP Adapter (Driving)
