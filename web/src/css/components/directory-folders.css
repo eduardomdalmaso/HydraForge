@@ -1,0 +1,66 @@
+/* CYBERPUNK DIRECTORY FOLDERS & DATA SHARDS (< 100 LINES) */
+.hub-container { max-width: 1300px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+.hub-hero-banner {
+  background: linear-gradient(135deg, rgba(14, 16, 23, 0.9), rgba(22, 25, 36, 0.8));
+  border: 1px solid var(--cb-border-dim);
+  border-left: 4px solid var(--cb-cyan);
+  padding: 1.25rem 1.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 0 100%);
+}
+.hub-title { font-family: var(--font-oxanium); font-size: 1.4rem; font-weight: 800; color: var(--cb-cyan); letter-spacing: 2px; }
+.hub-subtitle { font-family: var(--font-mono); font-size: 0.75rem; color: var(--cb-yellow); margin-top: 0.2rem; }
+
+.folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
+.cyber-folder-card {
+  position: relative;
+  background: var(--cb-bg-surface);
+  border: 1px solid var(--cb-border-dim);
+  padding: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+  clip-path: polygon(0 0, 140px 0, 155px 12px, 100% 12px, 100% 100%, 0 100%);
+}
+.folder-tab-ear {
+  position: absolute;
+  top: 0; left: 0;
+  width: 140px;
+  height: 20px;
+  background: rgba(0, 240, 255, 0.12);
+  border-right: 1px solid rgba(0, 240, 255, 0.3);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--cb-cyan);
+  padding: 2px 8px;
+  letter-spacing: 1px;
+}
+.cyber-folder-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--cb-cyan);
+  box-shadow: 0 8px 24px rgba(0, 240, 255, 0.15), inset 0 0 16px rgba(0, 240, 255, 0.05);
+}
+.cyber-folder-card:hover .folder-tab-ear { background: var(--cb-cyan); color: #07080c; }
+.folder-header { display: flex; align-items: center; justify-content: space-between; margin-top: 0.6rem; }
+.folder-title-group { display: flex; align-items: center; gap: 0.75rem; }
+.folder-icon { font-size: 1.5rem; filter: drop-shadow(0 0 6px var(--cb-cyan)); }
+.folder-title { font-family: var(--font-oxanium); font-size: 1.1rem; font-weight: 700; color: #fff; }
+.folder-desc { font-size: 0.82rem; color: #94a3b8; line-height: 1.4; min-height: 2.4rem; }
+.folder-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+.folder-action-btn { color: var(--cb-cyan); font-weight: 700; display: flex; align-items: center; gap: 0.3rem; }
+.cyber-folder-card:hover .folder-action-btn { color: var(--cb-yellow); }

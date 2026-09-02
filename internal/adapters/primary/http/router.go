@@ -3,13 +3,23 @@ package http
 import "net/http"
 
 // RegisterRoutes registers all API endpoints on the mux.
-func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler) {
+func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler) {
 	mux.HandleFunc("/api/v1/training/jobs", h.HandleJobs)
 	mux.HandleFunc("/api/v1/training/jobs/", h.HandleJobByID)
+	mux.HandleFunc("/api/v1/training/datasets/import", h.HandleDatasetImport)
+	mux.HandleFunc("/api/v1/training/datasets/audit/", h.HandleDatasetAudit)
+	mux.HandleFunc("/api/v1/training/datasets/image", h.HandleDatasetImage)
+	mux.HandleFunc("/api/v1/training/datasets/sample", h.HandleDatasetSample)
 	mux.HandleFunc("/api/v1/training/datasets", h.HandleDatasets)
 	mux.HandleFunc("/api/v1/training/datasets/", h.HandleDatasetByID)
 	mux.HandleFunc("/api/v1/training/telemetry", h.HandleTelemetry)
 	mux.HandleFunc("/api/v1/training/export", h.HandleExport)
+
+	// Benchmarks API
+	mux.HandleFunc("/api/v1/benchmarks", bh.HandleBenchmarks)
+	mux.HandleFunc("/api/v1/benchmarks/formats", bh.HandleBenchmarkFormats)
+	mux.HandleFunc("/api/v1/benchmarks/", bh.HandleBenchmarkByID)
+
 
 	// Swagger Interactive Docs
 	mux.HandleFunc("/swagger/", ServeSwaggerUI)

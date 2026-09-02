@@ -27,3 +27,14 @@ type CheckpointRepository interface {
 	GetCheckpoint(ctx context.Context, checkpointID string) (*domain.ModelCheckpoint, error)
 	ListCheckpoints(ctx context.Context, jobID string) ([]*domain.ModelCheckpoint, error)
 }
+
+// BenchmarkRepository handles persistence of benchmark runs and results.
+type BenchmarkRepository interface {
+	SaveBenchmark(ctx context.Context, job *domain.BenchmarkJob) error
+	GetBenchmark(ctx context.Context, jobID string) (*domain.BenchmarkJob, error)
+	ListBenchmarks(ctx context.Context, status string) ([]*domain.BenchmarkJob, error)
+	UpdateBenchmarkStatus(ctx context.Context, jobID string, status domain.BenchmarkStatus, errMsg string) error
+	AddBenchmarkResult(ctx context.Context, jobID string, result domain.FormatBenchmarkResult) error
+	DeleteBenchmark(ctx context.Context, jobID string) error
+}
+

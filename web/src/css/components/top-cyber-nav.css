@@ -1,0 +1,80 @@
+/* CYBERPUNK 2077 TOP NAV & BRAND TITLE (< 100 LINES) */
+.top-cyber-nav {
+  height: 64px;
+  background: var(--cb-bg-surface);
+  border-bottom: 2px solid var(--cb-border-dim);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.25rem;
+  flex-shrink: 0;
+  gap: 1rem;
+}
+.nav-brand-btn { display: flex; align-items: center; gap: 0.75rem; background: transparent; border: none; cursor: pointer; }
+.nav-brand-title-box { display: flex; align-items: baseline; transform: skewX(-12deg); font-family: var(--font-oxanium); font-weight: 900; letter-spacing: 2px; }
+.brand-hydra { font-size: 1.35rem; color: var(--cb-yellow); text-shadow: 0 0 8px rgba(252, 238, 10, 0.7), -2px 0px 0px var(--cb-cyan); }
+.brand-forge { font-size: 1.35rem; color: var(--cb-cyan); text-shadow: 0 0 8px rgba(0, 240, 255, 0.7), 2px 0px 0px var(--cb-magenta); margin-left: 2px; }
+
+.nav-folder-tabs { display: flex; align-items: center; gap: 0.75rem; overflow-x: auto; padding: 0.25rem 0; }
+.cybr-btn {
+  --primary-color: var(--cb-yellow);
+  --shadow-color: var(--cb-cyan);
+  --accent-tag: var(--cb-magenta);
+  position: relative;
+  font-family: var(--font-oxanium);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--primary-color);
+  background: rgba(14, 16, 23, 0.85);
+  border: 1px solid var(--primary-color);
+  padding: 0.45rem 1.1rem 0.45rem 0.75rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.cybr-btn:hover, .cybr-btn.cybr-btn--active {
+  background: var(--primary-color);
+  color: #07080c;
+  border-color: var(--primary-color);
+  filter: drop-shadow(-2px -2px 0px var(--shadow-color)) drop-shadow(2px 2px 0px var(--accent-tag));
+}
+.cybr-btn.cybr-btn--active { --primary-color: var(--cb-cyan); --shadow-color: var(--cb-yellow); }
+.cybr-btn__content { display: flex; align-items: center; gap: 0.4rem; z-index: 2; }
+.cybr-btn__tag {
+  position: absolute;
+  bottom: -2px;
+  right: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 1px 3px;
+  background: var(--accent-tag);
+  color: #fff;
+  z-index: 3;
+}
+.cybr-btn:hover .cybr-btn__tag, .cybr-btn.cybr-btn--active .cybr-btn__tag { background: #07080c; color: var(--primary-color); }
+.cybr-btn__glitch {
+  display: none;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--primary-color);
+  color: #07080c;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  z-index: 1;
+}
+.cybr-btn:hover .cybr-btn__glitch { display: flex; animation: glitch 0.25s steps(2, start) infinite; }
+@keyframes glitch {
+  0% { transform: translate(0, 0); clip-path: polygon(0 20%, 100% 20%, 100% 50%, 0 50%); }
+  50% { transform: translate(-2px, 1px); clip-path: polygon(0 60%, 100% 60%, 100% 90%, 0 90%); }
+  100% { transform: translate(2px, -1px); clip-path: polygon(0 0, 100% 0, 100% 30%, 0 30%); }
+}
+.top-nav-right { display: flex; align-items: center; gap: 0.75rem; }

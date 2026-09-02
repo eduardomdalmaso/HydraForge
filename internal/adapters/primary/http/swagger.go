@@ -33,6 +33,13 @@ const OpenAPI3Spec = `{
     },
     "/api/v1/training/export": {
       "post": { "summary": "Export model to TensorRT or ONNX", "responses": { "200": { "description": "Exported artifact" } } }
+    },
+    "/api/v1/benchmarks": {
+      "get": { "summary": "List multi-format benchmark jobs", "responses": { "200": { "description": "Benchmark jobs array" } } },
+      "post": { "summary": "Launch Ultralytics multi-format model benchmark", "responses": { "201": { "description": "Benchmark job started" } } }
+    },
+    "/api/v1/benchmarks/formats": {
+      "get": { "summary": "List supported export formats and hardware speedups", "responses": { "200": { "description": "Formats metadata array" } } }
     }
   }
 }`

@@ -24,4 +24,12 @@ type TrainingUseCase interface {
 	// Telemetry & Hardware
 	GetCockpitTelemetry(ctx context.Context) (*domain.CockpitTelemetry, error)
 	GetGPUTelemetry(ctx context.Context) (*domain.GPUTelemetry, error)
+
+	// Benchmarks & Model Evaluation
+	CreateBenchmarkJob(ctx context.Context, job *domain.BenchmarkJob) (*domain.BenchmarkJob, error)
+	GetBenchmarkJob(ctx context.Context, jobID string) (*domain.BenchmarkJob, error)
+	ListBenchmarkJobs(ctx context.Context, status string) ([]*domain.BenchmarkJob, error)
+	StopBenchmarkJob(ctx context.Context, jobID string) error
+	GetSupportedBenchmarkFormats(ctx context.Context) ([]map[string]interface{}, error)
 }
+

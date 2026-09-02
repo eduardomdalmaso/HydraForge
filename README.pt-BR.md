@@ -72,19 +72,20 @@ flowchart TD
 ## Páginas Principais
 
 ```
-┌───────────────────────────────────────────────────────────────────────────────────────┐
-│                           HYDRAFORGE - PÁGINAS DO PROJETO                             │
-├───────────────┬─────────────────┬──────────────────┬─────────────────┬────────────────┤
-│  1. COCKPIT   │  2. LIVE HUD    │  3. DATASETS     │  4. MODEL ZOO   │  5. PLAYGROUND │
-│   (LAUNCHER)  │  (MONITORAMENTO)│   (DADOS & YAML) │   (EXPORTAÇÃO)  │    (TESTE AO VIVO)
-└───────────────┴─────────────────┴──────────────────┴─────────────────┴────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                  HYDRAFORGE - PÁGINAS DO PROJETO                                  │
+├───────────────┬─────────────────┬──────────────────┬──────────────────┬─────────────────┬─────────┤
+│  1. COCKPIT   │  2. LIVE HUD    │  3. BENCHMARKS   │  4. DATASETS     │  5. MODEL ZOO   │ 6. TEST │
+│   (LAUNCHER)  │  (MONITORAMENTO)│   (SPEED & MAP)  │   (DADOS & YAML) │   (EXPORTAÇÃO)  │ (PLAYG) │
+└───────────────┴─────────────────┴──────────────────┴──────────────────┴─────────────────┴─────────┘
 ```
 
 1. **Cockpit de Treinamento (`#cockpit`):** Seletor de modelo, tarefa, optimizer (`AdamW`, `SGD`, `RMSprop`), Cosine LR, switches AMP FP16/BF16 e estimativa de VRAM.
 2. **Live Training HUD (`#live-hud`):** Curvas de loss e mAP em tempo real, galeria visual de predições por época e monitor de hardware da RTX 5090.
-3. **Dataset Studio (`#datasets`):** Validação de `data.yaml`, sliders de split treino/val/teste e gráfico de barras de frequência de classes.
-4. **Model Zoo & Exportador (`#model-zoo`):** Comparação de checkpoints (`best.pt` vs `last.pt`) e compilação em 1 clique para **TensorRT (`.engine`)**.
-5. **Playground de Inferência (`#playground`):** Teste de imagens e vídeos com sliders de confiança e IoU em tempo real.
+3. **Benchmark Studio (`#benchmarks`):** Suite de testes de benchmark Ultralytics multi-formato (TensorRT vs ONNX vs PyTorch) com gráfico de throughput e matriz de speedup.
+4. **Dataset Studio (`#datasets`):** Validação de `data.yaml`, sliders de split treino/val/teste e gráfico de barras de frequência de classes.
+5. **Model Zoo & Exportador (`#model-zoo`):** Comparação de checkpoints (`best.pt` vs `last.pt`) e compilação em 1 clique para **TensorRT (`.engine`)**.
+6. **Playground de Inferência (`#playground`):** Teste de imagens e vídeos com sliders de confiança e IoU em tempo real.
 
 ---
 

@@ -1,11 +1,7 @@
-/* ==========================================================================
-   NAVIGATION & SIDEBAR STYLES (< 100 LINES)
-   ========================================================================== */
-
+/* NAVIGATION & SIDEBAR STYLES (< 100 LINES) */
 .app-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; background: var(--cb-bg-void); }
-
 .sidebar-nav {
-  width: 270px;
+  width: 285px;
   background: var(--cb-bg-surface);
   border-right: 1px solid var(--cb-border-dim);
   display: flex;
@@ -13,7 +9,6 @@
   padding: 1.25rem 0.85rem;
   flex-shrink: 0;
 }
-
 .brand-header {
   display: flex;
   align-items: center;
@@ -22,42 +17,40 @@
   border-bottom: 1px solid rgba(0, 240, 255, 0.15);
   margin-bottom: 1.25rem;
 }
-.brand-logo-icon { font-size: 1.75rem; filter: drop-shadow(0 0 8px rgba(255, 0, 85, 0.6)); }
+.brand-logo-icon { filter: drop-shadow(0 0 8px rgba(255, 0, 85, 0.6)); }
 .brand-title { font-family: var(--font-oxanium); font-size: 1.25rem; font-weight: 800; color: var(--cb-cyan); letter-spacing: 2px; }
-.brand-subtitle { font-family: var(--font-mono); font-size: 0.7rem; color: var(--cb-yellow); letter-spacing: 1px; }
+.brand-subtitle { font-family: var(--font-mono); font-size: 0.68rem; color: var(--cb-yellow); letter-spacing: 1px; }
 
-.nav-menu { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
-
+.nav-menu { display: flex; flex-direction: column; gap: 0.45rem; flex: 1; }
 .nav-btn {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 0.85rem;
-  background: transparent;
-  border: 1px solid transparent;
+  gap: 0.7rem;
+  padding: 0.7rem 0.85rem;
+  background: rgba(14, 16, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.04);
   border-left: 3px solid transparent;
   color: #94a3b8;
   font-family: var(--font-oxanium);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;
   clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
 }
-
-.nav-btn:hover { background: rgba(0, 240, 255, 0.05); color: #fff; border-color: rgba(0, 240, 255, 0.2); }
+.nav-btn:hover { background: rgba(0, 240, 255, 0.06); color: #fff; border-color: rgba(0, 240, 255, 0.25); }
 .nav-btn.active {
   background: rgba(0, 240, 255, 0.12);
   color: var(--cb-cyan);
   border-color: rgba(0, 240, 255, 0.4);
   border-left-color: var(--cb-cyan);
-  box-shadow: inset 0 0 12px rgba(0, 240, 255, 0.15);
+  box-shadow: inset 0 0 12px rgba(0, 240, 255, 0.15), 0 0 8px rgba(0, 240, 255, 0.1);
 }
-
-.nav-icon { font-size: 1.1rem; }
-.nav-label { flex: 1; }
-.nav-tag { font-family: var(--font-mono); font-size: 0.65rem; color: var(--cb-yellow); opacity: 0.8; }
+.cyber-icon-glow { display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 4px currentColor); }
+.nav-label-group { display: flex; align-items: center; gap: 0.45rem; flex: 1; }
+.nav-code { font-family: var(--font-mono); font-size: 0.65rem; color: #64748b; font-weight: 700; }
+.nav-btn.active .nav-code { color: var(--cb-yellow); }
+.nav-tag { font-family: var(--font-mono); font-size: 0.65rem; color: var(--cb-yellow); opacity: 0.85; }
 
 .sidebar-footer { padding-top: 1rem; border-top: 1px solid var(--cb-border-dim); display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #64748b; }
 .gpu-badge { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono); color: var(--cb-green); }
@@ -76,7 +69,6 @@
   padding: 0 2rem;
   flex-shrink: 0;
 }
-
 .header-breadcrumbs { font-family: var(--font-oxanium); font-size: 0.85rem; color: #94a3b8; display: flex; gap: 0.5rem; }
 .crumb-active { color: var(--cb-cyan); font-weight: 700; }
 .header-status-group { display: flex; align-items: center; gap: 1rem; }
@@ -85,5 +77,4 @@
 .pill-val.cyan { color: var(--cb-cyan); font-weight: 700; }
 .pill-val.yellow { color: var(--cb-yellow); font-weight: 700; }
 .pill-sub { color: #94a3b8; font-size: 0.75rem; }
-
 .swagger-link-btn { background: var(--cb-cyan); color: #07080c; text-decoration: none; font-family: var(--font-oxanium); font-weight: 800; font-size: 0.75rem; padding: 0.35rem 0.75rem; clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%); }

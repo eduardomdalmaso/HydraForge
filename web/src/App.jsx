@@ -1,59 +1,62 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
+import TopCyberNav from './components/TopCyberNav';
 import TrainingCockpit from './views/TrainingCockpit';
+import LiveHudStudio from './views/LiveHudStudio';
+import BenchmarkStudio from './views/BenchmarkStudio';
+import PlaygroundStudio from './views/PlaygroundStudio';
+import DatasetStudio from './views/DatasetStudio';
+import ModelZooStudio from './views/ModelZooStudio';
 import { fetchTelemetryAPI, fetchDatasetsAPI } from './api/client';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('cockpit');
+  const getInitialTab = () => {
+    const hash = window.location.hash.replace('#', '');
+    return hash || 'cockpit';
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   const [telemetry, setTelemetry] = useState(null);
-  const [datasets, setDatasets] = useState([
-    { dataset_id: 'coco8', name: 'COCO8 Tiny Sample', num_classes: 8, train_images: 4, val_images: 4 }
-  ]);
+  const [datasets, setDatasets] = useState([]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      setActiveTab(hash || 'cockpit');
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const navigateTo = (tabId) => {
+    window.location.hash = tabId;
+    setActiveTab(tabId);
+  };
 
   useEffect(() => {
     const loadInitialData = async () => {
       const tel = await fetchTelemetryAPI();
       if (tel) setTelemetry(tel);
       const ds = await fetchDatasetsAPI();
-      if (ds && ds.length > 0) setDatasets(ds);
+      if (ds) setDatasets(ds);
     };
     loadInitialData();
-
     const interval = setInterval(loadInitialData, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleJobLaunched = (job) => {
-    setActiveTab('live-hud');
-  };
-
   return (
-    <div className="app-layout">
-      <Sidebar activeTab={activeTab} onSelectTab={setActiveTab} />
-      <div className="main-content">
-        <Header gpuTelemetry={telemetry?.gpu_stats} activeJobsCount={telemetry?.active_jobs_count} />
-        <main className="content-body">
-          {activeTab === 'cockpit' && (
-            <TrainingCockpit datasets={datasets} onJobLaunched={handleJobLaunched} />
-          )}
-          {activeTab !== 'cockpit' && (
-            <div className="view-container">
-              <div className="cyber-card" style={{ textAlign: 'center', padding: '3rem' }}>
-                <h2 style={{ color: 'var(--cb-cyan)', fontFamily: 'var(--font-oxanium)' }}>
-                  VIEW UNDER CONSTRUCTION: {activeTab.toUpperCase()}
-                </h2>
-                <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>
-                  Next module to be built in sequence. Select <strong>Training Cockpit</strong> to configure models.
-                </p>
-                <button className="cyber-pill active" style={{ marginTop: '1rem' }} onClick={() => setActiveTab('cockpit')}>
-                  ← Return to Training Cockpit
-                </button>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
+    <div className="app-layout" style={{ flexDirection: 'column' }}>
+      <TopCyberNav activeTab={activeTab} onSelectTab={navigateTo} gpuStats={telemetry?.gpu_stats} />
+      <main className="content-body">
+        {activeTab === 'cockpit' && (
+          <TrainingCockpit datasets={datasets} onJobLaunched={() => navigateTo('live-hud')} />
+        )}
+        {activeTab === 'live-hud' && <LiveHudStudio />}
+        {activeTab === 'benchmarks' && <BenchmarkStudio />}
+        {activeTab === 'datasets' && <DatasetStudio datasets={datasets} />}
+        {activeTab === 'playground' && <PlaygroundStudio />}
+        {activeTab === 'model-zoo' && <ModelZooStudio />}
+      </main>
     </div>
   );
 }

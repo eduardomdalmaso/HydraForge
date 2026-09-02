@@ -46,6 +46,14 @@ type Hyperparameters struct {
 	Workers       int     `json:"workers"`       // Dataloader workers
 	Mosaic        float64 `json:"mosaic"`        // Mosaic augmentation probability
 	Mixup         float64 `json:"mixup"`         // Mixup augmentation probability
+	Freeze        int     `json:"freeze"`        // Layer freeze depth (0, 10, 11, 23)
+	TwoStage      bool    `json:"two_stage"`     // Enable Two-Stage Fine-Tuning Pipeline
+	Stage1Epochs  int     `json:"stage1_epochs"` // Stage 1 Head Adaptation Epochs
+	Stage1Freeze  int     `json:"stage1_freeze"` // Stage 1 Freeze depth (10=Backbone, 23=Head-Only)
+	Stage2Epochs  int     `json:"stage2_epochs"` // Stage 2 Full Model Refinement Epochs
+	CloseMosaic   int     `json:"close_mosaic"`  // Disable mosaic for final N epochs
+	RecipePreset  string  `json:"recipe_preset"` // "default", "yolo26_recipe", "small_dataset", "two_stage"
+	Pretrained    bool    `json:"pretrained"`    // Start from pretrained weights (.pt)
 }
 
 // TrainingMetrics represents epoch-level metrics emitted by PyTorch.
@@ -131,7 +139,19 @@ func (j *TrainingJob) SetDefaults() {
 	if j.Hyperparameters.DeviceID == "" {
 		j.Hyperparameters.DeviceID = "0"
 	}
-	if j.TotalEpochs == 0 {
+	if j.Hyperparameters.TwoStage {
+		if j.Hyperparameters.Stage1Epochs == 0 {
+			j.Hyperparameters.Stage1Epochs = 20
+		}
+		if j.Hyperparameters.Stage1Freeze == 0 {
+			j.Hyperparameters.Stage1Freeze = 10
+		}
+		if j.Hyperparameters.Stage2Epochs == 0 {
+			j.Hyperparameters.Stage2Epochs = 30
+		}
+		j.TotalEpochs = j.Hyperparameters.Stage1Epochs + j.Hyperparameters.Stage2Epochs
+		j.Hyperparameters.Epochs = j.TotalEpochs
+	} else if j.TotalEpochs == 0 {
 		j.TotalEpochs = j.Hyperparameters.Epochs
 	}
 }

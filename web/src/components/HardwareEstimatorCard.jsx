@@ -1,14 +1,12 @@
 import React from 'react';
 
 export default function HardwareEstimatorCard({
-  datasets,
+  datasets = [],
   selectedDataset,
   setSelectedDataset,
   scale,
   batchSize,
-  imgsz,
-  onLaunch,
-  isLaunching
+  imgsz
 }) {
   const scaleMultiplier = scale === 'n' ? 1.0 : scale === 's' ? 1.8 : scale === 'm' ? 3.5 : scale === 'l' ? 5.5 : 8.0;
   const batchMultiplier = batchSize === -1 ? 16 : batchSize;
@@ -18,18 +16,22 @@ export default function HardwareEstimatorCard({
   return (
     <div className="cyber-card">
       <div className="card-header">
-        <span className="card-title">3. HARDWARE & RUN LAUNCHER</span>
+        <span className="card-title">3. HARDWARE & ESTIMATOR</span>
         <span className="badge-green">NVIDIA RTX 5090</span>
       </div>
 
       <div className="selector-group">
         <div className="selector-label">TARGET DATASET</div>
-        <select className="cyber-select" value={selectedDataset} onChange={(e) => setSelectedDataset(e.target.value)}>
-          {datasets.map((d) => (
-            <option key={d.dataset_id} value={d.dataset_id}>
-              {d.name} ({d.num_classes} classes • {d.train_images} train / {d.val_images} val)
-            </option>
-          ))}
+        <select className="cyber-select" value={selectedDataset || ''} onChange={(e) => setSelectedDataset(e.target.value)}>
+          {datasets.length === 0 ? (
+            <option value="">Nenhum dataset importado (importe em /datasets)</option>
+          ) : (
+            datasets.map((d) => (
+              <option key={d.dataset_id} value={d.dataset_id}>
+                {d.name} ({d.num_classes} classes • {d.train_images} train / {d.val_images} val)
+              </option>
+            ))
+          )}
         </select>
       </div>
 
@@ -53,10 +55,6 @@ export default function HardwareEstimatorCard({
           </span>
         </div>
       </div>
-
-      <button className="launch-btn" onClick={onLaunch} disabled={isLaunching}>
-        {isLaunching ? 'INITIALIZING WORKER...' : '⚡ INITIATE TRAINING RUN'}
-      </button>
     </div>
   );
 }

@@ -31,12 +31,15 @@ func main() {
 	}
 
 	// 3. Initialize Application Service (Use Case)
-	trainingService := application.NewTrainingService(memStore, memStore, memStore, pyWorker, gpuDetector)
+	trainingService := application.NewTrainingService(memStore, memStore, memStore, memStore, pyWorker, gpuDetector)
+
 
 	// 4. Initialize Primary HTTP Adapter (Driving)
 	handler := primaryHttp.NewTrainingHandler(trainingService)
+	bmkHandler := primaryHttp.NewBenchmarkHandler(trainingService)
 	mux := http.NewServeMux()
-	primaryHttp.RegisterRoutes(mux, handler)
+	primaryHttp.RegisterRoutes(mux, handler, bmkHandler)
+
 
 	// Static SPA Web UI
 	mux.Handle("/", http.FileServer(http.Dir("./web/dist")))

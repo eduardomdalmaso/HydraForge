@@ -16,7 +16,8 @@ func TestTrainingServiceLifecycle(t *testing.T) {
 	detector := gpu.NewDetector()
 	pyWorker := worker.NewPythonWorker()
 
-	service := application.NewTrainingService(memStore, memStore, memStore, pyWorker, detector)
+	service := application.NewTrainingService(memStore, memStore, memStore, memStore, pyWorker, detector)
+
 
 	// 1. Create Job
 	job := &domain.TrainingJob{

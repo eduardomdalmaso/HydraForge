@@ -72,19 +72,20 @@ flowchart TD
 ## Key Studio Views
 
 ```
-┌───────────────────────────────────────────────────────────────────────────────────────┐
-│                           HYDRAFORGE - STUDIO VIEWS                                   │
-├───────────────┬─────────────────┬──────────────────┬─────────────────┬────────────────┤
-│  1. COCKPIT   │  2. LIVE HUD    │  3. DATASETS     │  4. MODEL ZOO   │  5. PLAYGROUND │
-│   (LAUNCHER)  │  (MONITORING)   │   (DATA & YAML)  │   (EXPORTER)    │  (LIVE TEST)   │
-└───────────────┴─────────────────┴──────────────────┴─────────────────┴────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                     HYDRAFORGE - STUDIO VIEWS                                     │
+├───────────────┬─────────────────┬──────────────────┬──────────────────┬─────────────────┬─────────┤
+│  1. COCKPIT   │  2. LIVE HUD    │  3. BENCHMARKS   │  4. DATASETS     │  5. MODEL ZOO   │ 6. TEST │
+│   (LAUNCHER)  │  (MONITORING)   │   (SPEED & MAP)  │   (DATA & YAML)  │   (EXPORTER)    │ (PLAYG) │
+└───────────────┴─────────────────┴──────────────────┴──────────────────┴─────────────────┴─────────┘
 ```
 
 1. **Training Cockpit (`#cockpit`):** Model architecture selector, task variant picker, optimizer selection (`AdamW`, `SGD`, `RMSprop`), Cosine LR scheduling, AMP FP16/BF16 toggles, and dynamic VRAM estimation.
 2. **Live Training HUD (`#live-hud`):** Real-time loss and mAP curves, visual validation gallery with predicted bounding boxes per epoch, and RTX 5090 GPU hardware monitors.
-3. **Dataset Studio (`#datasets`):** `data.yaml` validation, train/val/test split sliders, and class distribution frequency bar chart.
-4. **Model Zoo & Exporter (`#model-zoo`):** Checkpoint comparison (`best.pt` vs `last.pt`), size vs mAP trade-off matrix, and 1-click **TensorRT (`.engine`)** compilation.
-5. **Inference Playground (`#playground`):** Drag-and-drop image/video testing with real-time confidence and IoU threshold sliders.
+3. **Benchmark Studio (`#benchmarks`):** Ultralytics multi-format benchmark launcher with live throughput comparison charts and speedup multipliers.
+4. **Dataset Studio (`#datasets`):** `data.yaml` validation, train/val/test split sliders, and class distribution frequency bar chart.
+5. **Model Zoo & Exporter (`#model-zoo`):** Checkpoint comparison (`best.pt` vs `last.pt`), size vs mAP trade-off matrix, and 1-click **TensorRT (`.engine`)** compilation.
+6. **Inference Playground (`#playground`):** Drag-and-drop image/video testing with real-time confidence and IoU threshold sliders.
 
 ---
 
