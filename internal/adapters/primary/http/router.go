@@ -15,6 +15,7 @@ func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler
 	mux.HandleFunc("/api/v1/training/datasets/", h.HandleDatasetByID)
 	mux.HandleFunc("/api/v1/training/telemetry", h.HandleTelemetry)
 	mux.HandleFunc("/api/v1/training/export", h.HandleExport)
+	mux.HandleFunc("/api/v1/training/models", h.HandleModels)
 
 	// Benchmarks API
 	mux.HandleFunc("/api/v1/benchmarks", bh.HandleBenchmarks)

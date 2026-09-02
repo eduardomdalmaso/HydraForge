@@ -311,6 +311,9 @@ func (s *SQLiteStore) ListJobs(ctx context.Context, status string) ([]*domain.Tr
 		_ = json.Unmarshal([]byte(paramsJSON), &job.Hyperparameters)
 		jobs = append(jobs, &job)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return jobs, nil
 }
 
@@ -421,6 +424,9 @@ func (s *SQLiteStore) ListDatasets(ctx context.Context) ([]*domain.Dataset, erro
 		_ = json.Unmarshal([]byte(classesJSON), &ds.Classes)
 		list = append(list, &ds)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return list, nil
 }
 
@@ -497,6 +503,9 @@ func (s *SQLiteStore) ListCheckpoints(ctx context.Context, jobID string) ([]*dom
 		c.ExportFormat = domain.ExportFormat(expFmtStr)
 		list = append(list, &c)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return list, nil
 }
 
@@ -566,6 +575,9 @@ func (s *SQLiteStore) ListBenchmarks(ctx context.Context, status string) ([]*dom
 		b.Status = domain.BenchmarkStatus(statusStr)
 		_ = json.Unmarshal([]byte(fmtsJSON), &b.TargetFormats)
 		list = append(list, &b)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return list, nil
 }

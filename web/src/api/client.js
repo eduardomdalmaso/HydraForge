@@ -57,3 +57,13 @@ export async function stopTrainingJobAPI(jobId) {
     return false;
   }
 }
+
+export async function fetchModelsAPI() {
+  try {
+    const res = await fetch('/api/v1/training/models');
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    return [];
+  }
+}

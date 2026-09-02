@@ -1,6 +1,6 @@
 import React from 'react';
 
-const FAMILIES = ['ALL', 'YOLO26', 'YOLO11', 'YOLOv8', 'SAM/DETR'];
+const FAMILIES = ['ALL', 'CUSTOM / TRAINED', 'YOLO26', 'YOLO11', 'YOLOv8'];
 const TASKS = ['ALL', 'DETECT', 'SEGMENT', 'POSE', 'OBB'];
 
 export default function ModelZooFilterBar({ selectedFamily, setSelectedFamily, selectedTask, setSelectedTask, totalCount }) {
