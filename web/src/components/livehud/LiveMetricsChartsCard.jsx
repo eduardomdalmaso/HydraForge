@@ -5,12 +5,13 @@ export default function LiveMetricsChartsCard({ job }) {
   const map5095 = job?.metrics?.map50_95 || 0;
   const boxLoss = job?.metrics?.box_loss || 0;
   const clsLoss = job?.metrics?.cls_loss || 0;
+  const hasData = job && (job.current_epoch > 0 || job.status === 'COMPLETED');
 
   return (
     <div className="cyber-card">
       <div className="card-header">
         <span className="card-title">2. ACCURACY & LOSS DYNAMICS</span>
-        <span className="badge-cyan">{job ? 'ACTIVE METRICS' : 'STANDBY'}</span>
+        <span className="badge-cyan">{hasData ? 'ACTIVE METRICS' : 'STANDBY'}</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -49,14 +50,14 @@ export default function LiveMetricsChartsCard({ job }) {
           <line x1="0" y1="30" x2="400" y2="30" className="hud-grid-line" />
           <line x1="0" y1="60" x2="400" y2="60" className="hud-grid-line" />
           <line x1="0" y1="90" x2="400" y2="90" className="hud-grid-line" />
-          {job ? (
+          {hasData ? (
             <>
               <path d="M 10,95 Q 80,70 160,45 T 320,25 T 390,18" className="hud-chart-line-loss" />
               <path d="M 10,100 Q 80,80 160,50 T 280,32 T 390,20" className="hud-chart-line-map" />
             </>
           ) : (
             <text x="200" y="60" textAnchor="middle" fill="#64748b" fontFamily="var(--font-mono)" fontSize="11">
-              Aguardando início do treinamento para desenhar curvas...
+              {job ? 'PyTorch inicializado na GPU... aguardando Época 1' : 'Aguardando início do treinamento para desenhar curvas...'}
             </text>
           )}
         </svg>

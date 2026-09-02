@@ -60,15 +60,39 @@ func (s *TrainingService) CreateTrainingJob(ctx context.Context, job *domain.Tra
 
 	// Trigger asynchronous training loop via worker port
 	go func(targetJob domain.TrainingJob) {
-		_ = s.jobRepo.UpdateJobStatus(context.Background(), targetJob.JobID, domain.StatusTraining, "")
-		
+		var totalEnergyKWh float64
+		var totalPowerWatts float64
+		var metricCount float64
+		var peakVRAM float64
+		var totalDurationSec float64
+		var totalFPS float64
+
 		err := s.worker.StartTraining(context.Background(), &targetJob, func(m domain.TrainingMetrics) {
 			s.mu.Lock()
 			s.recentMetrics = append(s.recentMetrics, m)
 			if len(s.recentMetrics) > 100 {
 				s.recentMetrics = s.recentMetrics[1:]
 			}
+			
+			metricCount++
+			totalPowerWatts += m.PowerWatts
+			totalDurationSec += m.EpochDurationSec
+			totalFPS += m.FPS
+			if m.GPUVRAMMB > peakVRAM {
+				peakVRAM = m.GPUVRAMMB
+			}
+			totalEnergyKWh += (m.PowerWatts * (m.EpochDurationSec / 3600.0)) / 1000.0
+
+			targetJob.CurrentEpoch = m.Epoch
+			targetJob.BestMAP50 = m.MAP50
+			targetJob.TotalEnergyKWh = totalEnergyKWh
+			targetJob.AvgPowerWatts = totalPowerWatts / metricCount
+			targetJob.PeakVRAMMB = peakVRAM
+			targetJob.DurationSec = totalDurationSec
+			targetJob.AvgFPS = totalFPS / metricCount
+			_ = s.jobRepo.SaveJob(context.Background(), &targetJob)
 			s.mu.Unlock()
+
 			s.broadcastMetric(m)
 		})
 

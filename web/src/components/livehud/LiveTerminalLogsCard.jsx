@@ -9,14 +9,22 @@ export default function LiveTerminalLogsCard({ job }) {
         { text: '[Status] Awaiting job launch from Training Cockpit...', type: 'normal' }
       ];
     }
+    const modelName = job.model_architecture || job.model_name || job.model || 'yolo26m';
+    const epochs = job.hyperparameters?.epochs || job.total_epochs || job.epochs || 50;
+    const batch = job.hyperparameters?.batch_size || job.batch_size || 32;
+    const imgsz = job.hyperparameters?.imgsz || job.img_size || 640;
+    const amp = job.hyperparameters?.amp !== false ? 'FP16 (Blackwell AMP)' : 'FP32';
+    const opt = job.hyperparameters?.optimizer || job.optimizer || 'AdamW';
+    const lr0 = job.hyperparameters?.lr0 || job.lr0 || 0.001;
+
     const lines = [
-      { text: `[HydraForge] Training Job ${job.job_id} (${job.model}) started on ${job.dataset_id}`, type: 'active' },
-      { text: `[Configuration] Epochs: ${job.epochs || 50} | Batch: ${job.batch_size || 32} | ImgSz: ${job.img_size || 640} | AMP: ${job.amp ? 'FP16' : 'FP32'}`, type: 'normal' },
-      { text: `[Optimizer] ${job.optimizer || 'AdamW'} initialized with lr0=${job.lr0 || 0.001}`, type: 'normal' }
+      { text: `[HydraForge] Training Job ${job.job_id} (${modelName}) started on ${job.dataset_id}`, type: 'active' },
+      { text: `[Configuration] Epochs: ${epochs} | Batch: ${batch} | ImgSz: ${imgsz} | AMP: ${amp}`, type: 'normal' },
+      { text: `[Optimizer] ${opt} initialized with lr0=${lr0}`, type: 'normal' }
     ];
     if (job.current_epoch > 0) {
       lines.push({
-        text: `Epoch ${job.current_epoch}/${job.epochs || 50} - Status: ${job.status} (Loss: ${job.metrics?.box_loss?.toFixed(3) || '0.042'})`,
+        text: `Epoch ${job.current_epoch}/${epochs} - Status: ${job.status} (Loss: ${job.metrics?.box_loss?.toFixed(3) || '-'})`,
         type: 'metric'
       });
     }

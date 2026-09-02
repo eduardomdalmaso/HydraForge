@@ -57,12 +57,12 @@ export default function PlaygroundControlBar({ config, setConfig, onRunInference
       </div>
 
       <button
-        className="cyber-pill active"
-        style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', textAlign: 'center', fontSize: '0.95rem' }}
+        className="cyber-action-btn"
+        style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem' }}
         onClick={onRunInference}
         disabled={isRunning}
       >
-        {isRunning ? 'RUNNING SCAN...' : '⚡ EXECUTE REAL-TIME SCAN'}
+        {isRunning ? 'SCANNING...' : 'PREDICT'}
       </button>
     </div>
   );

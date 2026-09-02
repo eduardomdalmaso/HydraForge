@@ -9,7 +9,7 @@ export default function TrainingCockpit({ datasets, onJobLaunched }) {
   const [family, setFamily] = useState('yolo26');
   const [scale, setScale] = useState('s');
   const [task, setTask] = useState('detect');
-  const [selectedDataset, setSelectedDataset] = useState(datasets?.[0]?.dataset_id || 'coco8');
+  const [selectedDataset, setSelectedDataset] = useState(datasets?.[0]?.dataset_id || 'frota_urbana_4classes');
   const [isLaunching, setIsLaunching] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [params, setParams] = useState({
@@ -24,6 +24,12 @@ export default function TrainingCockpit({ datasets, onJobLaunched }) {
     stage1_freeze: 10,
     stage2_epochs: 30
   });
+
+  React.useEffect(() => {
+    if (datasets && datasets.length > 0 && (!selectedDataset || selectedDataset === 'coco8')) {
+      setSelectedDataset(datasets[0].dataset_id);
+    }
+  }, [datasets, selectedDataset]);
 
   const handleLaunch = async () => {
     setIsLaunching(true);
@@ -41,6 +47,7 @@ export default function TrainingCockpit({ datasets, onJobLaunched }) {
 
       const result = await launchTrainingJobAPI(config);
       if (onJobLaunched) onJobLaunched(result);
+      window.location.hash = 'live-hud';
     } catch (err) {
       setErrorMsg(err.message || 'Launch error');
     } finally {
@@ -79,7 +86,7 @@ export default function TrainingCockpit({ datasets, onJobLaunched }) {
 
       <div className="cockpit-bottom-bar">
         <button className="cockpit-launch-action-btn" onClick={handleLaunch} disabled={isLaunching}>
-          {isLaunching ? 'INITIALIZING WORKER...' : 'INITIATE TRAINING RUN'}
+          {isLaunching ? 'LAUNCHING...' : 'LAUNCH'}
         </button>
       </div>
     </div>

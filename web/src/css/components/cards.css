@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CYBERPUNK CARDS & CONTAINER STYLES (< 100 LINES)
+   CYBERPUNK CARDS & GLOBAL ACTION BUTTONS (< 100 LINES)
    ========================================================================== */
 
 .view-container { max-width: 1400px; margin: 0 auto; width: 100%; }
@@ -52,17 +52,46 @@
 }
 .cyber-select:focus { border-color: var(--cb-cyan); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
 
-.status-badge.online {
-  display: flex;
+/* UNIVERSAL BEVELED CYBERPUNK ACTION BUTTON (LIKE INITIATE RUN) */
+.cyber-action-btn {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
-  background: rgba(0, 255, 102, 0.12);
-  color: var(--cb-green);
-  border: 1px solid var(--cb-green);
-  padding: 0.25rem 0.6rem;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 700;
-  border-radius: 3px;
+  padding: 0.6rem 1.4rem;
+  background: var(--cb-yellow);
+  color: #07080c;
+  font-family: var(--font-oxanium);
+  font-size: 0.85rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  border: none;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  filter: drop-shadow(-2px -2px 0px var(--cb-cyan)) drop-shadow(2px 2px 0px var(--cb-magenta));
 }
-.pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cb-green); box-shadow: 0 0 8px var(--cb-green); }
+.cyber-action-btn:hover:not(:disabled) {
+  background: var(--cb-cyan);
+  color: #07080c;
+  transform: translateY(-2px);
+  filter: drop-shadow(-3px -3px 0px var(--cb-yellow)) drop-shadow(3px 3px 0px var(--cb-magenta));
+}
+.cyber-action-btn.secondary {
+  background: rgba(14, 20, 32, 0.8);
+  color: #94a3b8;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  filter: none;
+}
+.cyber-action-btn.secondary:hover:not(:disabled) {
+  background: rgba(0, 240, 255, 0.15);
+  color: #fff;
+  border-color: var(--cb-cyan);
+}
+.cyber-action-btn.danger {
+  background: var(--cb-magenta);
+  color: #fff;
+  filter: drop-shadow(-2px -2px 0px #000) drop-shadow(2px 2px 0px var(--cb-magenta));
+}
+.cyber-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }

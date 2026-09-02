@@ -58,38 +58,48 @@ type Hyperparameters struct {
 
 // TrainingMetrics represents epoch-level metrics emitted by PyTorch.
 type TrainingMetrics struct {
-	Epoch        int     `json:"epoch"`
-	TotalEpochs  int     `json:"total_epochs"`
-	BoxLoss      float64 `json:"box_loss"`
-	ClsLoss      float64 `json:"cls_loss"`
-	DFLLoss      float64 `json:"dfl_loss"`
-	ValBoxLoss   float64 `json:"val_box_loss"`
-	ValClsLoss   float64 `json:"val_cls_loss"`
-	MAP50        float64 `json:"map50"`
-	MAP50_95     float64 `json:"map50_95"`
-	Precision    float64 `json:"precision"`
-	Recall       float64 `json:"recall"`
-	LearningRate float64 `json:"lr"`
-	GPUVRAMMB    float64 `json:"gpu_vram_mb"`
+	Epoch            int     `json:"epoch"`
+	TotalEpochs      int     `json:"total_epochs"`
+	BoxLoss          float64 `json:"box_loss"`
+	ClsLoss          float64 `json:"cls_loss"`
+	DFLLoss          float64 `json:"dfl_loss"`
+	ValBoxLoss       float64 `json:"val_box_loss"`
+	ValClsLoss       float64 `json:"val_cls_loss"`
+	MAP50            float64 `json:"map50"`
+	MAP50_95         float64 `json:"map50_95"`
+	Precision        float64 `json:"precision"`
+	Recall           float64 `json:"recall"`
+	LearningRate     float64 `json:"lr"`
+	GPUVRAMMB        float64 `json:"gpu_vram_mb"`
+	PowerWatts       float64 `json:"power_watts"`
+	TempCelsius      float64 `json:"temp_celsius"`
+	GPUUtilPct       float64 `json:"gpu_util_pct"`
+	FPS              float64 `json:"fps"`
+	EpochDurationSec float64 `json:"epoch_duration_sec"`
 }
 
 // TrainingJob represents a complete YOLO model training execution.
 type TrainingJob struct {
-	JobID           string          `json:"job_id"`
-	ModelArchitecture string        `json:"model_architecture"` // "yolov8n", "yolo11s", "yolov26m"
-	Task            TaskType        `json:"task"`
-	DatasetID       string          `json:"dataset_id"`
-	DatasetPath     string          `json:"dataset_path"`
-	Hyperparameters Hyperparameters `json:"hyperparameters"`
-	Status          JobStatus       `json:"status"`
-	CurrentEpoch    int             `json:"current_epoch"`
-	TotalEpochs     int             `json:"total_epochs"`
-	BestMAP50       float64         `json:"best_map50"`
-	Checkpoints     []string        `json:"checkpoints"`
-	OutputWeights   string          `json:"output_weights"`
-	ErrorMessage    string          `json:"error_message,omitempty"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at"`
+	JobID             string          `json:"job_id"`
+	ModelArchitecture string          `json:"model_architecture"` // "yolov8n", "yolo11s", "yolov26m"
+	Task              TaskType        `json:"task"`
+	DatasetID         string          `json:"dataset_id"`
+	DatasetPath       string          `json:"dataset_path"`
+	Hyperparameters   Hyperparameters `json:"hyperparameters"`
+	Status            JobStatus       `json:"status"`
+	CurrentEpoch      int             `json:"current_epoch"`
+	TotalEpochs       int             `json:"total_epochs"`
+	BestMAP50         float64         `json:"best_map50"`
+	Checkpoints       []string        `json:"checkpoints"`
+	OutputWeights     string          `json:"output_weights"`
+	TotalEnergyKWh    float64         `json:"total_energy_kwh"`
+	AvgPowerWatts     float64         `json:"avg_power_watts"`
+	PeakVRAMMB        float64         `json:"peak_vram_mb"`
+	AvgFPS            float64         `json:"avg_fps"`
+	DurationSec       float64         `json:"duration_sec"`
+	ErrorMessage      string          `json:"error_message,omitempty"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
 // Validate verifies domain business invariants.

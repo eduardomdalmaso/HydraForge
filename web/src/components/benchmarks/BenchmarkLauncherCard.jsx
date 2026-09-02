@@ -79,8 +79,8 @@ export default function BenchmarkLauncherCard({ onLaunch, isRunning }) {
           </div>
         </div>
 
-        <button type="submit" disabled={isRunning || formats.length === 0} className="cyber-pill active" style={{ width: '100%', marginTop: '1rem', padding: '0.7rem', textAlign: 'center', fontSize: '0.85rem' }}>
-          {isRunning ? 'RUNNING BENCHMARK MATRIX...' : '⚡ EXECUTE HARDWARE BENCHMARK'}
+        <button type="submit" disabled={isRunning || formats.length === 0} className="cyber-action-btn" style={{ width: '100%', marginTop: '1rem', padding: '0.75rem' }}>
+          {isRunning ? 'BENCHMARKING...' : 'BENCHMARK'}
         </button>
       </form>
     </div>

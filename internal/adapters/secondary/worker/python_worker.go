@@ -1,10 +1,17 @@
 package worker
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,50 +49,69 @@ func (w *PythonWorker) StartTraining(ctx context.Context, job *domain.TrainingJo
 		w.mu.Unlock()
 	}()
 
-	totalEpochs := job.Hyperparameters.Epochs
-	if totalEpochs > 10 {
-		totalEpochs = 10 // Simulated fast cycle if testing
+	pythonBin := "/home/hades/miniconda3/envs/analytics-env/bin/python"
+	if _, err := os.Stat(pythonBin); err != nil {
+		pythonBin = "/home/hades/miniconda3/envs/hydraforge/bin/python"
 	}
 
-	initialBoxLoss := 2.45
-	initialClsLoss := 3.12
-	initialDFLLoss := 1.88
+	yamlPath := job.DatasetPath
+	if yamlPath == "" {
+		yamlPath = filepath.Join("/home/hades/datasets", job.DatasetID, "data.yaml")
+	}
 
-	for epoch := 1; epoch <= totalEpochs; epoch++ {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(300 * time.Millisecond): // Simulate epoch computation
-			decay := math.Exp(-float64(epoch) / 5.0)
-			boxLoss := initialBoxLoss*decay + 0.35 + (rand.Float64() * 0.05)
-			clsLoss := initialClsLoss*decay + 0.22 + (rand.Float64() * 0.03)
-			dflLoss := initialDFLLoss*decay + 0.18 + (rand.Float64() * 0.02)
-			map50 := (1.0 - decay*0.85) * (0.92 + (rand.Float64() * 0.04))
-			map50_95 := map50 * 0.72
+	scriptPath := "/home/hades/Documents/HydraForge/worker_python/train.py"
+	if _, err := os.Stat(scriptPath); err != nil {
+		scriptPath = "worker_python/train.py"
+	}
 
-			metric := domain.TrainingMetrics{
-				Epoch:        epoch,
-				TotalEpochs:  totalEpochs,
-				BoxLoss:      boxLoss,
-				ClsLoss:      clsLoss,
-				DFLLoss:      dflLoss,
-				ValBoxLoss:   boxLoss * 1.1,
-				ValClsLoss:   clsLoss * 1.05,
-				MAP50:        map50,
-				MAP50_95:     map50_95,
-				Precision:    map50 * 0.96,
-				Recall:       map50 * 0.94,
-				LearningRate: job.Hyperparameters.LearningRate * decay,
-				GPUVRAMMB:    5420.0 + (float64(epoch) * 45.0),
-			}
+	args := []string{
+		scriptPath,
+		"--model", job.ModelArchitecture,
+		"--data", yamlPath,
+		"--epochs", strconv.Itoa(job.Hyperparameters.Epochs),
+		"--batch", strconv.Itoa(job.Hyperparameters.BatchSize),
+		"--imgsz", strconv.Itoa(job.Hyperparameters.ImageSize),
+		"--optimizer", job.Hyperparameters.Optimizer,
+		"--lr0", fmt.Sprintf("%f", job.Hyperparameters.LearningRate),
+		"--close-mosaic", strconv.Itoa(job.Hyperparameters.CloseMosaic),
+		"--job-id", job.JobID,
+	}
+	if job.Hyperparameters.Patience > 0 {
+		args = append(args, "--patience", strconv.Itoa(job.Hyperparameters.Patience))
+	}
+	if job.Hyperparameters.UseAMP {
+		args = append(args, "--amp")
+	}
 
-			if metricCallback != nil {
-				metricCallback(metric)
+	cmd := exec.CommandContext(ctx, pythonBin, args...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "HYDRA_METRIC:") {
+			jsonStr := strings.TrimPrefix(line, "HYDRA_METRIC:")
+			var m domain.TrainingMetrics
+			if err := json.Unmarshal([]byte(jsonStr), &m); err == nil {
+				if metricCallback != nil {
+					metricCallback(m)
+				}
 			}
 		}
 	}
+	if err := scanner.Err(); err != nil && ctx.Err() == nil {
+		_ = err
+	}
 
-	return nil
+	return cmd.Wait()
 }
 
 // StopTraining terminates an active training process.
@@ -126,9 +152,10 @@ func (w *PythonWorker) RunBenchmark(ctx context.Context, job *domain.BenchmarkJo
 	baseLatency := 6.4 // ms
 	baseMap := 0.528
 
-	if job.Quantize == 16 {
+	switch job.Quantize {
+	case 16:
 		baseSizeMB = 3.2
-	} else if job.Quantize == 8 {
+	case 8:
 		baseSizeMB = 1.8
 	}
 

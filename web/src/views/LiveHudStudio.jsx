@@ -47,7 +47,7 @@ export default function LiveHudStudio() {
       <div className="livehud-grid">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <LiveTrainingStatusCard job={activeJob} onAbortJob={handleAbort} />
-          <LiveGpuTelemetryCard gpuStats={telemetry?.gpu_stats} />
+          <LiveGpuTelemetryCard gpuStats={telemetry?.gpu_stats} job={activeJob} />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

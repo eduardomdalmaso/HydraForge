@@ -463,6 +463,140 @@ func (h *TrainingHandler) HandleDatasetImport(w http.ResponseWriter, r *http.Req
 	json.NewEncoder(w).Encode(registered)
 }
 
+// HandleDatasetMerge handles POST /api/v1/training/datasets/merge.
+func (h *TrainingHandler) HandleDatasetMerge(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error":"POST required"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		TargetName string                       `json:"target_name"`
+		DatasetIDs []string                     `json:"dataset_ids"`
+		Mappings   map[string]map[string]string `json:"mappings"`
+		Classes    []string                     `json:"classes"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"invalid JSON request"}`, http.StatusBadRequest)
+		return
+	}
+
+	if len(req.DatasetIDs) == 0 {
+		http.Error(w, `{"error":"at least 1 dataset required"}`, http.StatusBadRequest)
+		return
+	}
+
+	cleanTarget := strings.ToLower(strings.ReplaceAll(req.TargetName, " ", "_"))
+	if cleanTarget == "" {
+		cleanTarget = fmt.Sprintf("merged_%d", time.Now().Unix())
+	}
+	outDir := filepath.Join("/home/hades/datasets", cleanTarget)
+	_ = os.MkdirAll(filepath.Join(outDir, "train", "images"), 0755)
+	_ = os.MkdirAll(filepath.Join(outDir, "train", "labels"), 0755)
+	_ = os.MkdirAll(filepath.Join(outDir, "valid", "images"), 0755)
+	_ = os.MkdirAll(filepath.Join(outDir, "valid", "labels"), 0755)
+
+	trainCount := 0
+	valCount := 0
+
+	for _, dsID := range req.DatasetIDs {
+		srcDir := filepath.Join("/home/hades/datasets", dsID)
+		prefix := dsID + "_"
+		dsMap := req.Mappings[dsID]
+
+		for _, split := range []string{"train", "valid", "val"} {
+			targetSplit := "train"
+			if split != "train" {
+				targetSplit = "valid"
+			}
+			imgSrc := filepath.Join(srcDir, split, "images")
+			lblSrc := filepath.Join(srcDir, split, "labels")
+
+			entries, err := os.ReadDir(imgSrc)
+			if err != nil {
+				continue
+			}
+
+			for _, e := range entries {
+				if e.IsDir() {
+					continue
+				}
+				imgName := e.Name()
+				ext := filepath.Ext(imgName)
+				if ext != ".jpg" && ext != ".png" && ext != ".jpeg" {
+					continue
+				}
+				base := strings.TrimSuffix(imgName, ext)
+				dstImg := filepath.Join(outDir, targetSplit, "images", prefix+imgName)
+				srcImg := filepath.Join(imgSrc, imgName)
+				_ = os.Symlink(srcImg, dstImg)
+
+				// Copy and rewrite label
+				srcLbl := filepath.Join(lblSrc, base+".txt")
+				dstLbl := filepath.Join(outDir, targetSplit, "labels", prefix+base+".txt")
+				if data, err := os.ReadFile(srcLbl); err == nil {
+					var newLines []string
+					for _, line := range strings.Split(string(data), "\n") {
+						parts := strings.Fields(line)
+						if len(parts) >= 5 {
+							oldCid := parts[0]
+							newCid := "0"
+							if mapped, ok := dsMap[oldCid]; ok {
+								if mapped == "ignorar" || mapped == "-1" {
+									continue
+								}
+								newCid = mapped
+							}
+							newLines = append(newLines, newCid+" "+strings.Join(parts[1:], " "))
+						}
+					}
+					_ = os.WriteFile(dstLbl, []byte(strings.Join(newLines, "\n")), 0644)
+				}
+
+				if targetSplit == "train" {
+					trainCount++
+				} else {
+					valCount++
+				}
+			}
+		}
+	}
+
+	if len(req.Classes) == 0 {
+		req.Classes = []string{"carro", "moto", "caminhao", "onibus"}
+	}
+
+	yamlPath := filepath.Join(outDir, "data.yaml")
+	var namesYaml strings.Builder
+	for i, c := range req.Classes {
+		namesYaml.WriteString(fmt.Sprintf("  %d: %s\n", i, c))
+	}
+	yamlContent := fmt.Sprintf("# Ultralytics YOLO Unified Dataset\npath: /home/hades/datasets/%s\ntrain: train/images\nval: valid/images\ntest: test/images\n\nnc: %d\nnames:\n%s", cleanTarget, len(req.Classes), namesYaml.String())
+	_ = os.WriteFile(yamlPath, []byte(yamlContent), 0644)
+
+	ds := &domain.Dataset{
+		DatasetID:   cleanTarget,
+		Name:        req.TargetName,
+		Task:        domain.TaskDetect,
+		YAMLPath:    yamlPath,
+		Classes:     req.Classes,
+		NumClasses:  len(req.Classes),
+		TrainImages: trainCount,
+		ValImages:   valCount,
+		CreatedAt:   time.Now(),
+	}
+
+	saved, err := h.useCase.RegisterDataset(r.Context(), ds)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(saved)
+}
+
 // HandleExport handles POST /api/v1/training/export.
 func (h *TrainingHandler) HandleExport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
