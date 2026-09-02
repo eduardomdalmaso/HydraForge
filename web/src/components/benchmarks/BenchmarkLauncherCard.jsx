@@ -40,7 +40,7 @@ export default function BenchmarkLauncherCard({ onLaunch, isRunning, jobs = [], 
             <div className="selector-label">MODEL CHECKPOINT</div>
             <select className="cyber-select" value={model} onChange={e => setModel(e.target.value)}>
               <optgroup label="Trained Models">
-                {jobs.map(j => <option key={j.job_id} value={j.output_weights || j.model_architecture}>🎯 [Trained] {j.model_architecture} ({j.dataset_id}){j.best_map50 ? ` - ${(j.best_map50 * 100).toFixed(1)}%` : ''}</option>)}
+                {jobs.map(j => <option key={j.job_id} value={j.output_weights || j.model_architecture}>[TRAINED] {j.model_architecture} ({j.dataset_id}){j.best_map50 ? ` - ${(j.best_map50 * 100).toFixed(1)}%` : ''}</option>)}
               </optgroup>
               <optgroup label="Base Pretrained Models">{BASE_MODELS.map(m => <option key={m} value={m}>{m}</option>)}</optgroup>
             </select>
@@ -49,7 +49,7 @@ export default function BenchmarkLauncherCard({ onLaunch, isRunning, jobs = [], 
             <div className="selector-label">VALIDATION DATASET</div>
             <select className="cyber-select" value={data} onChange={e => setData(e.target.value)}>
               <optgroup label="Workspace Datasets">
-                {datasets.map(d => <option key={d.dataset_id} value={d.yaml_path || d.dataset_id}>📁 {d.name || d.dataset_id} ({d.num_classes || d.classes?.length || 1} cls)</option>)}
+                {datasets.map(d => <option key={d.dataset_id} value={d.yaml_path || d.dataset_id}>[DATASET] {d.name || d.dataset_id} ({d.num_classes || d.classes?.length || 1} CLS)</option>)}
               </optgroup>
               <optgroup label="Reference Datasets"><option value="coco8.yaml">coco8.yaml (YOLO Demo)</option></optgroup>
             </select>
@@ -72,8 +72,8 @@ export default function BenchmarkLauncherCard({ onLaunch, isRunning, jobs = [], 
           <div className="selector-group" style={{ marginBottom: 0 }}>
             <div className="selector-label">DEVICE</div>
             <select className="cyber-select" value={device} onChange={e => onDeviceChange(e.target.value)}>
-              <option value="0">🎮 GPU 0: {gpuName} ({vramGB} GB)</option>
-              <option value="cpu">💻 CPU: Host Multi-Core</option>
+              <option value="0">GPU 0: {gpuName} ({vramGB} GB)</option>
+              <option value="cpu">CPU: HOST MULTI-CORE</option>
             </select>
           </div>
         </div>

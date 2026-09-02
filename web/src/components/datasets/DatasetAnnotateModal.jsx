@@ -43,9 +43,9 @@ export default function DatasetAnnotateModal({ isOpen, onClose, dataset }) {
           <div className="selector-group" style={{ marginBottom: 0 }}>
             <div className="selector-label" style={{ fontSize: '0.7rem' }}>ORACLE MODEL</div>
             <select className="cyber-select" value={model} onChange={(e) => setModel(e.target.value)} disabled={isAnnotating}>
-              <option value="yolo26x">⚡ YOLO26 XLarge (Max Recall)</option>
-              <option value="yolo26m">⚡ YOLO26 Medium (Fast)</option>
-              <option value="sam2">👁️ SAM 2 (Segment Anything)</option>
+              <option value="yolo26x">YOLO26 XLARGE // MAX RECALL</option>
+              <option value="yolo26m">YOLO26 MEDIUM // HIGH SPEED</option>
+              <option value="sam2">SAM 2 // SEGMENT ANYTHING</option>
             </select>
           </div>
 

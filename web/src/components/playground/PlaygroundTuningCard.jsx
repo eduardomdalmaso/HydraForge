@@ -49,7 +49,7 @@ export default function PlaygroundTuningCard({ config, setConfig }) {
             onChange={(e) => setConfig({ ...config, nmsFree: e.target.checked })}
           />
           <label htmlFor="nmsFreeCheck" style={{ fontSize: '0.75rem', color: '#cbd5e1', cursor: 'pointer' }}>
-            ⚡ NMS-Free End-to-End Output (YOLO26)
+            NMS-FREE END-TO-END OUTPUT (YOLO26)
           </label>
         </div>
       </div>
@@ -58,7 +58,7 @@ export default function PlaygroundTuningCard({ config, setConfig }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontFamily: 'var(--font-oxanium)', fontSize: '0.85rem', color: config.sahi ? 'var(--cb-cyan)' : '#fff', fontWeight: '700' }}>
-              🧩 SAHI 4K SLICED INFERENCE
+              SAHI 4K SLICED INFERENCE
             </div>
             <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Detect tiny objects in ultra-HD</div>
           </div>
@@ -76,7 +76,7 @@ export default function PlaygroundTuningCard({ config, setConfig }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontFamily: 'var(--font-oxanium)', fontSize: '0.85rem', color: config.isolateBg ? 'var(--cb-green)' : '#fff', fontWeight: '700' }}>
-              ✂️ BACKGROUND REMOVER (PNG)
+              ALPHA BACKGROUND REMOVER (PNG)
             </div>
             <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Extract transparent alpha masks</div>
           </div>

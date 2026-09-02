@@ -24,6 +24,14 @@ func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler
 	mux.HandleFunc("/api/v1/benchmarks/formats", bh.HandleBenchmarkFormats)
 	mux.HandleFunc("/api/v1/benchmarks/", bh.HandleBenchmarkByID)
 
+	// HydraStream Integration Proxy (Port 8080)
+	mux.HandleFunc("/api/v1/hydrastream/", HydraStreamProxy("http://localhost:8080"))
+
+	// Real-Time Optical YOLO Inference (NVIDIA RTX 5090)
+	mux.HandleFunc("/api/v1/inference/predict", HandleInferencePredict)
+	mux.HandleFunc("/api/v1/inference/live", HandleInferenceLiveStream)
+	mux.HandleFunc("/api/v1/inference/frame", HandleWebcamFrameUpload)
+
 
 	// Swagger Interactive Docs
 	mux.HandleFunc("/swagger/", ServeSwaggerUI)
