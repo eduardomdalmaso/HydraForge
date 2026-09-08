@@ -1,19 +1,10 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [vue()],
   server: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8081',
-        changeOrigin: true
-      }
-    }
-  },
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true
+    port: 5173,
+    host: true
   }
-});
+})

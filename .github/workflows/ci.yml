@@ -1,0 +1,85 @@
+name: HydraForge CI (Multi-Stage Fast Feedback)
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  fast_feedback:
+    name: "Stage 1: Fast Feedback (Unit & Domain Tests < 5s)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Run Go Unit Tests (In-Memory Fakes)
+        run: |
+          go test -v -short ./...
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dev Dependencies
+        run: |
+          pip install -r worker_python/requirements-dev.txt
+
+      - name: Run Fast Python Unit Tests
+        run: |
+          cd worker_python
+          pytest -m "unit" --cov=curation
+
+  contract_and_property:
+    name: "Stage 2: Contract & Property-Based Tests (Hypothesis)"
+    needs: fast_feedback
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r worker_python/requirements-dev.txt
+
+      - name: Run Property-Based Hypothesis Tests
+        run: |
+          cd worker_python
+          pytest -m "property" -v
+
+  hardware_smoke:
+    name: "Stage 3: Hardware & PyTorch Smoke Tests"
+    needs: contract_and_property
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyTorch & Pytest
+        run: |
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -r worker_python/requirements-dev.txt
+
+      - name: Run Smoke Tests (Synthetic Micro-Batch)
+        run: |
+          cd worker_python
+          pytest -m "smoke" -v

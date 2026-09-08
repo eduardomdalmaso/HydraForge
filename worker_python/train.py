@@ -6,6 +6,16 @@ import time
 import shutil
 import torch
 from ultralytics import YOLO
+from training.gc_tuning import tune_gc_thresholds
+from training.memory_guard import MemoryBudgetGuard
+
+# ---------------------------------------------------------------------------
+# High Performance Python GPU Optimizations (TF32, CUDNN Benchmark & GC Tuning)
+# ---------------------------------------------------------------------------
+if torch.cuda.is_available():
+    torch.set_float32_matmul_precision('high')  # Ativa TensorFloat-32 nos Tensor Cores
+    torch.backends.cudnn.benchmark = True       # Encontra o algoritmo de convolução mais rápido
+    tune_gc_thresholds(alloc_threshold=50000)   # Estabiliza o Garbage Collector contra micro-stutters
 
 try:
     import pynvml
@@ -24,6 +34,8 @@ def main():
     parser.add_argument('--device', type=str, default='0')
     parser.add_argument('--optimizer', type=str, default='AdamW')
     parser.add_argument('--amp', action='store_true', default=True)
+    parser.add_argument('--compile', action='store_true', default=False, help='Habilita compilação JIT com torch.compile')
+    parser.add_argument('--workers', type=int, default=8, help='Dataloader multiprocessing workers')
     parser.add_argument('--lr0', type=float, default=0.001)
     parser.add_argument('--close-mosaic', type=int, default=10)
     parser.add_argument('--patience', type=int, default=50)
@@ -231,14 +243,60 @@ def main():
     model.add_callback('on_train_batch_end', on_train_batch_end)
     model.add_callback('on_fit_epoch_end', on_fit_epoch_end)
 
+    # ---------------------------------------------------------------------------
+    # Pre-Flight Anti-OOM Resource Guard & Parameter Auto-Tuning
+    # ---------------------------------------------------------------------------
+    dataset_img_count = 10000
+    try:
+        import yaml
+        if os.path.exists(args.data):
+            with open(args.data, 'r', encoding='utf-8') as f:
+                data_cfg = yaml.safe_load(f)
+                train_path = data_cfg.get('train', '')
+                if os.path.isabs(train_path) and os.path.exists(train_path):
+                    if os.path.isdir(train_path):
+                        dataset_img_count = len(os.listdir(train_path))
+                    elif os.path.isfile(train_path):
+                        with open(train_path, 'r') as tf:
+                            dataset_img_count = sum(1 for _ in tf)
+    except Exception:
+        pass
+
+    mem_plan = MemoryBudgetGuard.compute_safe_plan(
+        dataset_size=dataset_img_count,
+        imgsz=args.imgsz,
+        batch_size=args.batch,
+        num_workers=args.workers,
+        cache=False,
+        amp=args.amp
+    )
+
+    mem_payload = {
+        "dataset_size": dataset_img_count,
+        "batch_size": mem_plan.batch_size,
+        "num_workers": mem_plan.num_workers,
+        "cache": mem_plan.cache,
+        "estimated_ram_mb": mem_plan.estimated_ram_mb,
+        "available_ram_mb": mem_plan.available_ram_mb,
+        "estimated_vram_mb": mem_plan.estimated_vram_mb,
+        "available_vram_mb": mem_plan.available_vram_mb,
+        "is_adjusted": mem_plan.is_adjusted,
+        "warnings": list(mem_plan.warnings)
+    }
+    print(f"HYDRA_MEMORY_PLAN:{json.dumps(mem_payload)}", flush=True)
+
     results = model.train(
         data=args.data,
         epochs=args.epochs,
-        batch=args.batch,
+        batch=mem_plan.batch_size,
         imgsz=args.imgsz,
         device=args.device,
         optimizer=args.optimizer,
         amp=args.amp,
+        workers=mem_plan.num_workers,
+        cache=mem_plan.cache,
+        compile=args.compile,
+        plots=False,
         lr0=args.lr0,
         close_mosaic=args.close_mosaic,
         patience=args.patience,
