@@ -2,12 +2,12 @@
 import DirectoryFolderCard from '../components/DirectoryFolderCard.vue'
 
 const DIRECTORIES = [
-  { id: 'cockpit', code: 'DIR_01', label: 'TRAINING COCKPIT', tag: 'LAUNCHER', desc: 'Configure YOLOv8, YOLO11, YOLO26 architectures, hyperparameters, AMP FP16/BF16, and launch training loops.', stats: '5 ARCHITECTURES', status: 'ACTIVE' },
-  { id: 'live-hud', code: 'DIR_02', label: 'LIVE TELEMETRY HUD', tag: 'METRICS', desc: 'Realtime WebSocket HUD with live Bézier loss curves (box/cls/dfl), mAP50 precision, and RTX 5090 sensors.', stats: 'WS STREAMING', status: 'STREAM' },
-  { id: 'benchmarks', code: 'DIR_03', label: 'BENCHMARK STUDIO', tag: 'SPEED_MAP', desc: 'Ultralytics multi-format speed evaluation. Compare PyTorch vs TensorRT (5.5x) vs ONNX across FPS, latency, and mAP.', stats: '11 RUNTIMES', status: 'OPTIMIZED' },
-  { id: 'datasets', code: 'DIR_04', label: 'DATASET STUDIO', tag: 'DATA_YAML', desc: 'Validate data.yaml configs, inspect class distribution bar charts for bias detection, and manage train/val splits.', stats: 'COCO / YOLO', status: 'READY' },
-  { id: 'model-zoo', code: 'DIR_05', label: 'MODEL ZOO & EXPORT', tag: 'TENSORRT', desc: 'Manage checkpoints (best.pt vs last.pt), compare accuracy retention, and compile 1-click TensorRT .engine models.', stats: '1-CLICK TRT', status: 'EXPORT' },
-  { id: 'playground', code: 'DIR_06', label: 'KIROSHI PLAYGROUND', tag: 'INFERENCE', desc: 'Drag & drop image/video inference testing with real-time confidence and IoU threshold sliders powered by PyTorch.', stats: 'LIVE TEST', status: 'OPTIC' }
+  { id: 'cockpit', code: 'DIR_01', label: 'ESTUDIO DE TREINO', tag: 'LAUNCHER', desc: 'Configure arquiteturas YOLOv8, YOLO11, YOLO26, hiperparametros e execute treinos na GPU RTX 5090.', stats: 'YOLO MATRIX', status: 'ATIVO' },
+  { id: 'live-hud', code: 'DIR_02', label: 'TELEMETRIA AO VIVO', tag: 'METRICS', desc: 'Monitoramento em tempo real com curvas de loss (box/cls/dfl), precisao mAP50 e telemetria da GPU.', stats: 'WS STREAMING', status: 'ONLINE' },
+  { id: 'benchmarks', code: 'DIR_03', label: 'ESTUDIO DE BENCHMARKS', tag: 'SPEED_MAP', desc: 'Avaliacao de velocidade e exportacao. Compare PyTorch vs TensorRT vs ONNX com medicao de FPS.', stats: 'RUNTIMES', status: 'OTIMIZADO' },
+  { id: 'datasets', code: 'DIR_04', label: 'ESTUDIO DE DATASETS', tag: 'DATA_YAML', desc: 'Valide configuracoes data.yaml, inspecione distribuicao de classes e gerencie splits de treino/val.', stats: 'COCO / YOLO', status: 'PRONTO' },
+  { id: 'model-zoo', code: 'DIR_05', label: 'REPOSITORIO MODEL ZOO', tag: 'TENSORRT', desc: 'Gerencie checkpoints (best.pt vs last.pt), compare retencao de acuracia e compile engines TensorRT.', stats: 'CHECKPOINTS', status: 'EXPORT' },
+  { id: 'playground', code: 'DIR_06', label: 'PLAYGROUND DE INFERENCIA', tag: 'INFERENCE', desc: 'Inferencia em imagens e streams com ajuste de confianca e IoU em tempo real via PyTorch/TensorRT.', stats: 'LIVE TEST', status: 'PRONTO' }
 ]
 
 defineProps<{ gpuStats?: any }>()
@@ -18,17 +18,17 @@ const emit = defineEmits<{ (e: 'navigate', tabId: string): void }>()
   <div class="hub-container">
     <div class="hub-hero-banner">
       <div>
-        <div class="hub-title">HYDRAFORGE CYBERDECK OS</div>
-        <div class="hub-subtitle">// NEURAL STUDIO SYSTEM ARCHITECTURE • SELECT A DIRECTORY MODULE TO MOUNT</div>
+        <div class="hub-title">CENTRAL DE MODULOS HYDRAFORGE</div>
+        <div class="hub-subtitle">SISTEMA INTEGRADO DE TREINAMENTO E INFERENCIA YOLO</div>
       </div>
       <div class="header-status-group">
         <div class="header-metric-pill">
           <span class="pill-label">GPU:</span>
-          <span class="pill-val cyan">{{ gpuStats?.model || gpuStats?.name || 'RTX 5090' }}</span>
+          <span class="pill-val">{{ gpuStats?.model || gpuStats?.name || 'RTX 5090' }}</span>
         </div>
         <div class="header-metric-pill">
           <span class="pill-label">VRAM:</span>
-          <span class="pill-val yellow">{{ (gpuStats?.total_vram_mb || gpuStats?.vram_total_mb || 32607).toFixed(0) }} MB</span>
+          <span class="pill-val">{{ (gpuStats?.total_vram_mb || gpuStats?.vram_total_mb || 32607).toFixed(0) }} MB</span>
         </div>
       </div>
     </div>

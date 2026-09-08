@@ -21,22 +21,22 @@ const emit = defineEmits<{
 <template>
   <div class="cyber-folder-card" @click="emit('open', folder.id)">
     <div class="folder-tab-ear">
-      // {{ folder.code }} [{{ folder.tag }}]
+      {{ folder.code }} // {{ folder.tag }}
     </div>
     
     <div class="folder-header">
       <div class="folder-title-group">
-        <div class="folder-icon cyber-icon-glow">
+        <div class="folder-icon">
           <CyberNavIcons :type="folder.id" />
         </div>
         <div>
           <div class="folder-title">{{ folder.label }}</div>
-          <div class="text-mono" style="font-size: 0.7rem; color: var(--cb-yellow);">
-            PATH: /{{ folder.id }}
+          <div class="text-mono" style="font-size: 0.7rem; color: var(--vms-text-muted);">
+            /{{ folder.id }}
           </div>
         </div>
       </div>
-      <span class="card-badge">{{ folder.status || 'READY' }}</span>
+      <span class="badge-cyan">{{ folder.status || 'PRONTO' }}</span>
     </div>
 
     <div class="folder-desc">
@@ -44,11 +44,11 @@ const emit = defineEmits<{
     </div>
 
     <div class="folder-footer">
-      <span style="color: #64748b;">
-        METRIC: <strong style="color: var(--cb-green);">{{ folder.stats }}</strong>
+      <span>
+        METRIC: <strong style="color: var(--vms-success);">{{ folder.stats }}</strong>
       </span>
       <span class="folder-action-btn">
-        MOUNT DIRECTORY ❯❯
+        ACESSAR ➔
       </span>
     </div>
   </div>

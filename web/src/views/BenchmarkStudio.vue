@@ -54,7 +54,7 @@ const handleLaunch = async (config: any) => {
     const created = await launchBenchmarkAPI(config)
     activeJob.value = created
   } catch (err: any) {
-    errorMsg.value = err.message || 'Failed to start benchmark'
+    errorMsg.value = err.message || 'Erro ao iniciar benchmark'
     isRunning.value = false
   }
 }
@@ -63,14 +63,15 @@ const handleLaunch = async (config: any) => {
 <template>
   <div class="view-container benchmark-container">
     <div class="cockpit-full-header">
-      <h1 class="cockpit-main-title">BENCHMARK & EXPORT STUDIO</h1>
+      <h1 class="cockpit-main-title">ESTUDIO DE BENCHMARKS & EXPORTACAO</h1>
       <p class="cockpit-main-subtitle">
-        HARDWARE ACCELERATION // TENSORRT 10.x // ONNX // OPENVINO & THROUGHPUT PROFILING
+        ACELERACAO DE HARDWARE // TENSORRT 10.x // ONNX // THROUGHPUT & LATENCIA (FPS)
       </p>
     </div>
 
-    <div v-if="errorMsg" class="cyber-alert alert-critical">
-      <span>[ALERT] {{ errorMsg }}</span>
+    <div v-if="errorMsg" class="cyber-alerts-banner">
+      <span class="cyber-alert-badge">ERRO</span>
+      <span>{{ errorMsg }}</span>
     </div>
 
     <BenchmarkSummaryCards :results="activeJob?.results" />

@@ -5,8 +5,8 @@ withDefaults(defineProps<{
   size?: number
   glow?: boolean
 }>(), {
-  size: 38,
-  glow: true
+  size: 34,
+  glow: false
 })
 </script>
 
@@ -18,20 +18,19 @@ withDefaults(defineProps<{
       alignItems: 'center', 
       justifyContent: 'center',
       position: 'relative',
-      filter: glow ? 'drop-shadow(0 0 8px rgba(255, 0, 60, 0.75)) drop-shadow(0 0 2px rgba(255, 0, 60, 0.9))' : 'none',
       flexShrink: 0
     }"
   >
     <img 
       :src="logoImg" 
-      alt="HydraForge Cyber Emblem" 
+      alt="HydraForge Logo" 
       :style="{
         width: `${size}px`,
         height: `${size}px`,
         objectFit: 'cover',
-        borderRadius: '4px',
-        border: '1.5px solid rgba(255, 0, 60, 0.6)',
-        clipPath: 'polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px))'
+        borderRadius: '6px',
+        border: '1px solid rgba(255, 255, 255, 0.12)',
+        boxShadow: glow ? '0 2px 8px rgba(255, 94, 58, 0.25)' : 'none'
       }"
     />
   </div>

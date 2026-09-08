@@ -28,8 +28,8 @@ const handleDatasetImported = (newDs: any) => {
 <template>
   <div class="view-container datasets-container">
     <div class="cockpit-full-header">
-      <h1 class="cockpit-main-title">DATASET STUDIO</h1>
-      <p class="cockpit-main-subtitle">DATA REPOSITORY // YAML SPECIFICATION // K-FOLD CROSS-VALIDATION & LEAKAGE AUDIT</p>
+      <h1 class="cockpit-main-title">ESTUDIO DE DATASETS YOLO</h1>
+      <p class="cockpit-main-subtitle">REPOSITORIO DE DADOS // ESPECIFICACAO YAML // K-FOLD CROSS-VALIDATION & AUDITORIA</p>
     </div>
 
     <div class="datasets-grid">

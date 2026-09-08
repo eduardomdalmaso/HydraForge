@@ -1,54 +1,56 @@
-/* HYDRAFORGE MODEL ZOO STUDIO CSS (< 100 LINES) */
+/* ==========================================================================
+   CLEAN SLATE DARK MODEL ZOO STUDIO CSS (< 100 LINES)
+   ========================================================================== */
+
 .zoo-container { display: flex; flex-direction: column; width: 100%; max-width: 1650px; margin: 0 auto; gap: 1.25rem; }
 .zoo-layout { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.25rem; width: 100%; align-items: start; }
 @media (max-width: 1200px) { .zoo-layout { grid-template-columns: 1fr; } }
 
 .model-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
 .model-item-card {
-  background: rgba(14, 16, 23, 0.85);
-  border: 1px solid rgba(0, 240, 255, 0.2);
-  border-radius: 4px;
+  background: var(--vms-bg-surface);
+  border: 1px solid var(--vms-border);
+  border-radius: var(--vms-radius-md);
   padding: 1rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   position: relative;
-  overflow: hidden;
 }
 .model-item-card:hover {
-  border-color: var(--cb-cyan);
-  background: rgba(0, 240, 255, 0.08);
-  box-shadow: 0 0 20px rgba(0, 240, 255, 0.18);
+  border-color: var(--vms-border-light);
+  background: var(--vms-bg-elevated);
   transform: translateY(-2px);
 }
 .model-item-card.selected {
-  border-color: var(--cb-yellow);
-  background: rgba(252, 238, 10, 0.08);
-  box-shadow: 0 0 20px rgba(252, 238, 10, 0.25);
+  border-color: var(--vms-primary);
+  background: var(--vms-bg-elevated);
 }
+
 .model-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
-.model-name { font-family: var(--font-oxanium); font-weight: 700; font-size: 1.1rem; color: #fff; }
-.model-item-card.selected .model-name { color: var(--cb-yellow); }
+.model-name { font-family: var(--font-inter); font-weight: 600; font-size: 0.95rem; color: #ffffff; }
+.model-item-card.selected .model-name { color: var(--vms-primary); }
 .model-task-badge {
   font-family: var(--font-mono);
   font-size: 0.65rem;
   padding: 2px 6px;
-  border-radius: 2px;
-  background: rgba(0, 240, 255, 0.15);
-  color: var(--cb-cyan);
-  border: 1px solid var(--cb-cyan);
+  border-radius: var(--vms-radius-sm);
+  background: var(--vms-primary-subtle);
+  color: var(--vms-primary);
+  border: 1px solid rgba(255, 94, 58, 0.25);
 }
+
 .model-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.75rem; text-align: center; }
-.model-stat-box { background: rgba(0,0,0,0.3); padding: 0.4rem; border-radius: 3px; border: 1px solid rgba(255,255,255,0.05); }
-.model-stat-val { font-family: var(--font-mono); font-weight: 700; font-size: 0.85rem; color: var(--cb-cyan); }
-.model-stat-lbl { font-size: 0.65rem; color: #94a3b8; margin-top: 2px; }
+.model-stat-box { background: var(--vms-bg-elevated); padding: 0.4rem; border-radius: var(--vms-radius-sm); border: 1px solid var(--vms-border); }
+.model-stat-val { font-family: var(--font-mono); font-weight: 600; font-size: 0.8125rem; color: #ffffff; }
+.model-stat-lbl { font-size: 0.65rem; color: var(--vms-text-muted); margin-top: 2px; }
 
 .distill-connector-box {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(0,0,0,0.4);
+  background: var(--vms-bg-elevated);
   padding: 0.75rem;
-  border-radius: 4px;
-  border: 1px dashed rgba(0, 240, 255, 0.3);
+  border-radius: var(--vms-radius-sm);
+  border: 1px solid var(--vms-border);
   margin: 0.75rem 0;
 }

@@ -1,55 +1,71 @@
 /* ==========================================================================
-   CYBERPUNK DESIGN SYSTEM - TOKENS & VARIABLES (< 100 LINES)
+   HYDRAFORGE 3-COLOR SYSTEM: ORANGE (#ff5e3a), WHITE, GRAY (< 100 LINES)
    ========================================================================== */
 
 :root {
-  /* High-Performance Font Stacks (Clean Fallbacks - Zero System Probing) */
-  --font-oxanium: 'Oxanium', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-tomorrow: 'Tomorrow', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-barlow: 'Barlow', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Oxanium', ui-monospace, monospace;
+  /* High-Performance Font Stacks */
+  --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-roboto: 'Roboto', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  --font-display: var(--font-oxanium);
-  --font-heading: var(--font-tomorrow);
-  --font-body: var(--font-barlow);
+  --font-display: var(--font-inter);
+  --font-heading: var(--font-inter);
+  --font-body: var(--font-roboto);
 
-  /* Dark Theme Palette */
-  --cb-bg-void: #07080c;
-  --cb-bg-surface: #0e1017;
-  --cb-bg-elevated: #161924;
-  --cb-border-dim: #232736;
+  /* Core 3-Color Visual Identity */
+  --vms-color-white: #ffffff;
+  --vms-color-orange: #ff5e3a;
+  --vms-color-black: #07080c;
 
-  /* Neon Accent Tokens */
-  --cb-cyan: #00f0ff;
-  --cb-yellow: #fcee0a;
-  --cb-magenta: #ff0055;
-  --cb-green: #00ff66;
-  --cb-amber: #ffaa00;
+  /* Surfaces & Grayscale Hierarchy */
+  --vms-bg-base: #07080c;
+  --vms-bg-surface: #0e1117;
+  --vms-bg-elevated: #14171d;
+  --vms-bg-elevated-hover: #1c212a;
 
-  /* Typography Colors */
-  --cb-title-color: #fcee0a;
-  --cb-card-title-color: #fcee0a;
-  --cb-table-header-color: #f59e0b;
-  --cb-text-main: #f0f2f5;
-  --cb-text-muted: #8b94a7;
+  /* Grayscale Subtle Borders */
+  --vms-border: rgba(255, 255, 255, 0.06);
+  --vms-border-light: rgba(255, 255, 255, 0.09);
+  --vms-border-focus: #ff5e3a;
 
-  /* HUD Overlays */
-  --cb-grid-line: rgba(0, 240, 255, 0.04);
-}
+  /* White & Gray Typography */
+  --vms-text-main: #ffffff;
+  --vms-text-regular: #cbd5e1;
+  --vms-text-muted: #8b94a0;
+  --vms-text-dim: #5a626f;
 
-[data-theme="light"] {
-  --cb-bg-void: #e6e9f0;
-  --cb-bg-surface: #ffffff;
-  --cb-bg-elevated: #f0f3f8;
-  --cb-border-dim: #cbd2e1;
-  --cb-cyan: #0088cc;
-  --cb-yellow: #d4a000;
-  --cb-magenta: #d9004c;
-  --cb-green: #00a843;
-  --cb-amber: #d97700;
-  --cb-title-color: #d4a000;
-  --cb-card-title-color: #d4a000;
-  --cb-table-header-color: #d97700;
-  --cb-text-main: #0e1017;
-  --cb-text-muted: #5a6478;
+  /* Orange Accent & Primary Actions */
+  --vms-primary: #ff5e3a;
+  --vms-primary-hover: #ff7250;
+  --vms-primary-active: #e04826;
+  --vms-primary-subtle: rgba(255, 94, 58, 0.12);
+
+  /* Status Indicators (Strictly Orange, White, Gray) */
+  --vms-success: #ff5e3a;
+  --vms-warning: #ff5e3a;
+  --vms-danger: #ff5e3a;
+  --vms-info: #ffffff;
+
+  /* Universal Fallbacks strictly Orange, White, Gray */
+  --cb-bg-void: var(--vms-bg-base);
+  --cb-bg-surface: var(--vms-bg-surface);
+  --cb-bg-elevated: var(--vms-bg-elevated);
+  --cb-border-dim: var(--vms-border);
+  --cb-cyan: #ff5e3a;
+  --cb-yellow: #ff5e3a;
+  --cb-magenta: #ff5e3a;
+  --cb-green: #ffffff;
+  --cb-amber: #ff5e3a;
+  --cb-title-color: #ffffff;
+  --cb-card-title-color: #ffffff;
+  --cb-table-header-color: #cbd5e1;
+  --cb-text-main: var(--vms-text-main);
+  --cb-text-muted: var(--vms-text-muted);
+  --cb-grid-line: transparent;
+
+  /* Dimensions & Radius */
+  --vms-header-height: 52px;
+  --vms-radius-sm: 4px;
+  --vms-radius-md: 6px;
+  --vms-radius-lg: 8px;
 }

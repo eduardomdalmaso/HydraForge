@@ -67,14 +67,14 @@ const navigate = (hash: string) => {
 <template>
   <div class="view-container livehud-container">
     <div class="cockpit-full-header">
-      <h1 class="cockpit-main-title">LIVE HUD TELEMETRY & VALIDATION STUDIO</h1>
+      <h1 class="cockpit-main-title">TELEMETRIA & MONITORAMENTO AO VIVO</h1>
       <p class="cockpit-main-subtitle">
-        REAL-TIME PYTORCH RUNTIMES // LOSS & mAP DYNAMICS // GPU HARDWARE TELEMETRY & EXPERIMENT MATRIX
+        CURVAS DE LOSS & mAP // TELEMETRIA DE GPU NVIDIA RTX 5090 // MATRIZ DE EXPERIMENTOS
       </p>
     </div>
 
     <div class="livehud-grid">
-      <div style="display: flex; flexDirection: column; gap: 1.25rem;">
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
         <LiveTrainingStatusCard
           :job="activeJob"
           @abortJob="handleAbort"
@@ -84,7 +84,7 @@ const navigate = (hash: string) => {
         <LiveGpuTelemetryCard :gpuStats="telemetry?.gpu_stats" :job="activeJob" />
       </div>
 
-      <div style="display: flex; flexDirection: column; gap: 1.25rem;">
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
         <LiveMetricsChartsCard :job="activeJob" :recentMetrics="telemetry?.recent_metrics" />
         <LiveTerminalLogsCard :job="activeJob" :rawLogs="telemetry?.raw_logs" :recentMetrics="telemetry?.recent_metrics" :gpuStats="telemetry?.gpu_stats" />
       </div>

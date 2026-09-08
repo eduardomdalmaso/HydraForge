@@ -1,6 +1,5 @@
 /* ==========================================================================
-   KIROSHI OPTICAL HUD REALTIME TRACKING STYLES (< 100 LINES)
-   Clean, high-visibility bounding box tracking without artificial scan effects
+   VIEWPORT TRACKING FOOTER STYLES (< 100 LINES)
    ========================================================================== */
 
 .viewport-footer-hud {
@@ -8,10 +7,10 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.45rem 0.8rem;
-  background: rgba(11, 14, 20, 0.95);
-  border-top: 1px solid rgba(0, 240, 255, 0.25);
+  background: var(--vms-bg-elevated);
+  border-top: 1px solid var(--vms-border);
   font-family: var(--font-mono);
   font-size: 0.72rem;
-  color: #94a3b8;
-  letter-spacing: 0.5px;
+  color: var(--vms-text-muted);
+  letter-spacing: 0.3px;
 }

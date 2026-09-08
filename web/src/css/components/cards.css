@@ -1,21 +1,22 @@
 /* ==========================================================================
-   CYBERPUNK CARDS & GLOBAL ACTION BUTTONS (< 100 LINES)
+   3-COLOR CARDS & BUTTONS (ORANGE, WHITE, GRAY) (< 100 LINES)
    ========================================================================== */
 
 .view-container { max-width: 1400px; margin: 0 auto; width: 100%; }
 .view-header { margin-bottom: 1.5rem; }
-.view-title { font-family: var(--font-oxanium); font-size: 1.75rem; font-weight: 800; color: #fff; letter-spacing: 2px; }
-.view-subtitle { font-family: var(--font-mono); font-size: 0.8rem; color: var(--cb-cyan); letter-spacing: 1px; margin-top: 0.25rem; }
+.view-title { font-family: var(--font-inter); font-size: 1.35rem; font-weight: 700; color: #ffffff; letter-spacing: -0.02em; }
+.view-subtitle { font-family: var(--font-mono); font-size: 0.775rem; color: var(--vms-text-muted); margin-top: 0.25rem; }
 
-.cyber-card {
-  background: var(--cb-bg-surface);
-  border: 1px solid var(--cb-border-dim);
-  border-left: 3px solid var(--cb-cyan);
+.cyber-card, .vms-card {
+  background: var(--vms-bg-surface);
+  border: 1px solid var(--vms-border);
   padding: 1.25rem;
-  border-radius: 4px;
+  border-radius: var(--vms-radius-md);
   position: relative;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.15s ease;
 }
+.cyber-card:hover, .vms-card:hover { border-color: var(--vms-border-light); }
 
 .card-header {
   display: flex;
@@ -23,75 +24,74 @@
   align-items: center;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--vms-border);
 }
 
 .card-title {
-  font-family: var(--font-oxanium);
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--cb-yellow);
-  letter-spacing: 1px;
+  font-family: var(--font-inter);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--vms-text-main);
+  letter-spacing: 0.2px;
 }
 
-.badge-cyan { background: rgba(0, 240, 255, 0.15); color: var(--cb-cyan); border: 1px solid var(--cb-cyan); padding: 0.2rem 0.5rem; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; border-radius: 2px; }
-.badge-yellow { background: rgba(252, 238, 10, 0.15); color: var(--cb-yellow); border: 1px solid var(--cb-yellow); padding: 0.2rem 0.5rem; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; border-radius: 2px; }
-.badge-green { background: rgba(0, 255, 102, 0.15); color: var(--cb-green); border: 1px solid var(--cb-green); padding: 0.2rem 0.5rem; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; border-radius: 2px; }
+.badge-cyan { background: rgba(255, 255, 255, 0.06); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.12); padding: 0.2rem 0.5rem; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600; border-radius: var(--vms-radius-sm); }
+.badge-yellow { background: rgba(255, 94, 58, 0.12); color: var(--vms-primary); border: 1px solid rgba(255, 94, 58, 0.25); padding: 0.2rem 0.5rem; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600; border-radius: var(--vms-radius-sm); }
+.badge-green { background: rgba(255, 94, 58, 0.12); color: var(--vms-primary); border: 1px solid rgba(255, 94, 58, 0.25); padding: 0.2rem 0.5rem; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600; border-radius: var(--vms-radius-sm); }
 
-.cyber-select {
+.cyber-select, .vms-select {
   width: 100%;
-  background: var(--cb-bg-elevated);
-  border: 1px solid var(--cb-border-dim);
-  color: #fff;
+  background: var(--vms-bg-elevated);
+  border: 1px solid var(--vms-border);
+  color: #ffffff;
   padding: 0.5rem 0.75rem;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
-  border-radius: 3px;
+  font-size: 0.8125rem;
+  border-radius: var(--vms-radius-sm);
   outline: none;
   cursor: pointer;
+  transition: border-color 0.15s ease;
 }
-.cyber-select:focus { border-color: var(--cb-cyan); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
+.cyber-select:focus, .vms-select:focus { border-color: var(--vms-border-focus); }
 
-/* UNIVERSAL BEVELED CYBERPUNK ACTION BUTTON (LIKE INITIATE RUN) */
-.cyber-action-btn {
+/* CLEAN ACTION BUTTONS */
+.cyber-action-btn, .vms-btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.6rem 1.4rem;
-  background: var(--cb-yellow);
-  color: #07080c;
-  font-family: var(--font-oxanium);
-  font-size: 0.85rem;
-  font-weight: 900;
+  gap: 0.45rem;
+  padding: 0.55rem 1.25rem;
+  background: var(--vms-primary);
+  color: #ffffff;
+  font-family: var(--font-inter);
+  font-size: 0.8125rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 0.5px;
   border: none;
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+  border-radius: var(--vms-radius-md);
   cursor: pointer;
-  transition: all 0.2s ease;
-  filter: drop-shadow(-2px -2px 0px var(--cb-cyan)) drop-shadow(2px 2px 0px var(--cb-magenta));
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(255, 94, 58, 0.25);
 }
-.cyber-action-btn:hover:not(:disabled) {
-  background: var(--cb-cyan);
-  color: #07080c;
-  transform: translateY(-2px);
-  filter: drop-shadow(-3px -3px 0px var(--cb-yellow)) drop-shadow(3px 3px 0px var(--cb-magenta));
+.cyber-action-btn:hover:not(:disabled), .vms-btn-primary:hover:not(:disabled) {
+  background: var(--vms-primary-hover);
+  box-shadow: 0 4px 12px rgba(255, 94, 58, 0.4);
 }
-.cyber-action-btn.secondary {
-  background: rgba(14, 20, 32, 0.8);
-  color: #94a3b8;
-  border: 1px solid rgba(0, 240, 255, 0.3);
-  filter: none;
+.cyber-action-btn.secondary, .vms-btn-secondary {
+  background: var(--vms-bg-elevated);
+  color: var(--vms-text-regular);
+  border: 1px solid var(--vms-border);
+  box-shadow: none;
 }
-.cyber-action-btn.secondary:hover:not(:disabled) {
-  background: rgba(0, 240, 255, 0.15);
-  color: #fff;
-  border-color: var(--cb-cyan);
+.cyber-action-btn.secondary:hover:not(:disabled), .vms-btn-secondary:hover:not(:disabled) {
+  background: var(--vms-bg-elevated-hover);
+  color: #ffffff;
+  border-color: var(--vms-border-light);
 }
-.cyber-action-btn.danger {
-  background: var(--cb-magenta);
-  color: #fff;
-  filter: drop-shadow(-2px -2px 0px #000) drop-shadow(2px 2px 0px var(--cb-magenta));
+.cyber-action-btn.danger, .vms-btn-danger {
+  background: #ff5e3a;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(255, 94, 58, 0.3);
 }
-.cyber-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cyber-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }

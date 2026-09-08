@@ -41,7 +41,7 @@ const handleLaunch = async () => {
     emit('jobLaunched', result)
     if (typeof window !== 'undefined') window.location.hash = 'live-hud'
   } catch (err: any) {
-    errorMsg.value = err.message || 'Launch error'
+    errorMsg.value = err.message || 'Erro ao iniciar treinamento'
   } finally {
     isLaunching.value = false
   }
@@ -51,12 +51,13 @@ const handleLaunch = async () => {
 <template>
   <div class="view-container cockpit-container">
     <div class="cockpit-full-header">
-      <h1 class="cockpit-main-title">TRAINING COCKPIT</h1>
-      <p class="cockpit-main-subtitle">CONFIGURE ARCHITECTURE, HYPERPARAMETERS & INITIALIZE GPU TRAINING RUNS</p>
+      <h1 class="cockpit-main-title">ESTUDIO DE TREINAMENTO YOLO</h1>
+      <p class="cockpit-main-subtitle">CONFIGURE ARQUITETURA, HIPERPARAMETROS E EXECUTE TREINOS NA GPU NVIDIA RTX 5090</p>
     </div>
 
-    <div v-if="errorMsg" class="cyber-alert alert-critical" style="margin-bottom: 1rem;">
-      <span>[ALERT] {{ errorMsg }}</span>
+    <div v-if="errorMsg" class="cyber-alerts-banner" style="margin-bottom: 1rem;">
+      <span class="cyber-alert-badge">ERRO</span>
+      <span>{{ errorMsg }}</span>
     </div>
 
     <div class="cockpit-quad-grid">
@@ -68,7 +69,7 @@ const handleLaunch = async () => {
 
     <div class="cockpit-bottom-bar">
       <button class="cockpit-launch-action-btn" :disabled="isLaunching" @click="handleLaunch">
-        {{ isLaunching ? 'LAUNCHING...' : 'LAUNCH' }}
+        {{ isLaunching ? 'INICIANDO TREINO...' : 'INICIAR TREINAMENTO' }}
       </button>
     </div>
   </div>

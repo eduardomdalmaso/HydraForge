@@ -31,19 +31,19 @@ const estimatedVRAM = computed(() => {
 <template>
   <div class="cyber-card">
     <div class="card-header">
-      <span class="card-title">3. HARDWARE & ESTIMATOR</span>
+      <span class="card-title">3. HARDWARE & ESTIMADOR</span>
       <span class="badge-green">NVIDIA RTX 5090</span>
     </div>
 
     <div class="selector-group">
-      <div class="selector-label">TARGET DATASET</div>
+      <div class="selector-label">DATASET ALVO</div>
       <select
         class="cyber-select"
         :value="selectedDataset"
         @change="(e) => emit('update:selectedDataset', (e.target as HTMLSelectElement).value)"
       >
         <option v-if="datasets.length === 0" value="">
-          [EMPTY] No dataset imported (import via DATASET STUDIO)
+          [VAZIO] Nenhum dataset importado (importe via DATASETS)
         </option>
         <option
           v-for="d in datasets"
@@ -55,22 +55,22 @@ const estimatedVRAM = computed(() => {
       </select>
     </div>
 
-    <div class="telemetry-box" style="background: rgba(0,0,0,0.4); padding: 1rem; border-radius: 4px; border: 1px solid rgba(0, 240, 255, 0.15);">
-      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-        <span style="font-size: 0.8rem; color: #94a3b8;">ESTIMATED VRAM PEAK:</span>
-        <span style="font-family: var(--font-mono); color: var(--cb-yellow); font-weight: 700;">
+    <div class="telemetry-box" style="background: var(--vms-bg-elevated); padding: 0.85rem; border-radius: var(--vms-radius-sm); border: 1px solid var(--vms-border);">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 0.45rem;">
+        <span style="font-size: 0.775rem; color: var(--vms-text-muted);">PICO ESTIMADO DE VRAM:</span>
+        <span style="font-family: var(--font-mono); color: var(--vms-primary); font-weight: 600; font-size: 0.8125rem;">
           ~{{ estimatedVRAM }} GB / 32.0 GB
         </span>
       </div>
-      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-        <span style="font-size: 0.8rem; color: #94a3b8;">HARDWARE DEVICE:</span>
-        <span style="font-family: var(--font-mono); color: var(--cb-green); font-weight: 700;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 0.45rem;">
+        <span style="font-size: 0.775rem; color: var(--vms-text-muted);">DISPOSITIVO:</span>
+        <span style="font-family: var(--font-mono); color: var(--vms-success); font-weight: 600; font-size: 0.8125rem;">
           cuda:0 (NVIDIA RTX 5090)
         </span>
       </div>
       <div style="display: flex; justify-content: space-between;">
-        <span style="font-size: 0.8rem; color: #94a3b8;">ZERO-COPY EXPORT:</span>
-        <span style="font-family: var(--font-mono); color: var(--cb-cyan); font-weight: 700;">
+        <span style="font-size: 0.775rem; color: var(--vms-text-muted);">EXPORTACAO ZERO-COPY:</span>
+        <span style="font-family: var(--font-mono); color: var(--vms-info); font-weight: 600; font-size: 0.8125rem;">
           TensorRT 10.x Engine
         </span>
       </div>

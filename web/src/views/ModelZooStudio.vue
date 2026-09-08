@@ -49,9 +49,9 @@ const navigateTo = (tab: string) => {
 <template>
   <div class="view-container zoo-container">
     <div class="cockpit-full-header">
-      <h1 class="cockpit-main-title">MODEL ZOO REPOSITORY</h1>
+      <h1 class="cockpit-main-title">REPOSITORIO MODEL ZOO</h1>
       <p class="cockpit-main-subtitle">
-        OFFICIAL CHECKPOINTS // CUSTOM TRAINED MODELS ON RTX 5090 // DISTILLATION & RUNTIMES
+        CHECKPOINTS OFICIAIS // MODELOS CUSTOMIZADOS TREINADOS NA RTX 5090 // DESTILACAO & RUNTIMES
       </p>
     </div>
 

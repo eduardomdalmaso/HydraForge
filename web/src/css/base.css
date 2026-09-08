@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CYBERPUNK DESIGN SYSTEM - BASE & LAYOUT RESET
+   CLEAN SLATE DARK BASE & LAYOUT RESET (< 100 LINES)
    ========================================================================== */
 
 * {
@@ -10,14 +10,12 @@
 
 body {
   font-family: var(--font-body);
-  background-color: var(--cb-bg-void);
-  color: var(--cb-text-main);
+  background-color: var(--vms-bg-base);
+  color: var(--vms-text-main);
   line-height: 1.5;
   overflow-x: hidden;
-  background-image: 
-    linear-gradient(var(--cb-grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--cb-grid-line) 1px, transparent 1px);
-  background-size: 30px 30px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::-webkit-scrollbar {
@@ -26,34 +24,52 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--cb-bg-void);
+  background: var(--vms-bg-base);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--cb-border-dim);
-  border-radius: 0;
+  background: #1e2430;
+  border-radius: var(--vms-radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--cb-cyan);
+  background: #2a3344;
 }
 
-.app-container, .cyber-layout {
+.app-layout, .app-container {
   display: flex;
   min-height: 100vh;
   width: 100%;
+  background: var(--vms-bg-base);
 }
 
-.main-content {
+.content-body, .main-content {
   flex: 1;
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   overflow-y: auto;
-}
-
-.cyber-cut-tr {
-  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+  max-width: 1680px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .text-mono {
   font-family: var(--font-mono);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  background: var(--vms-primary);
+  box-shadow: 0 0 6px rgba(255, 94, 58, 0.6);
+}
+.status-dot.green, .status-dot.orange, .status-dot.yellow, .status-dot.red {
+  background: var(--vms-primary);
+  box-shadow: 0 0 6px rgba(255, 94, 58, 0.6);
+}
+.status-dot.cyan, .status-dot.white {
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
 }

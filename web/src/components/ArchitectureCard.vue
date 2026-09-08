@@ -10,11 +10,11 @@ const SCALES = [
   { id: 'x', label: 'XLarge (x)' }
 ]
 const TASKS = [
-  { id: 'detect', label: '[DETECT]' },
-  { id: 'segment', label: '[SEGMENT]' },
-  { id: 'pose', label: '[POSE]' },
-  { id: 'classify', label: '[CLASSIFY]' },
-  { id: 'obb', label: '[OBB]' }
+  { id: 'detect', label: 'DETECCAO' },
+  { id: 'segment', label: 'SEGMENTACAO' },
+  { id: 'pose', label: 'POSE' },
+  { id: 'classify', label: 'CLASSIFICACAO' },
+  { id: 'obb', label: 'OBB' }
 ]
 
 const props = defineProps<{
@@ -35,16 +35,14 @@ const modelTag = computed(() => {
 </script>
 
 <template>
-  <div class="cyber-card" style="position: relative;">
-    <div class="hud-corner-tl" />
-    <div class="hud-corner-br" />
+  <div class="cyber-card">
     <div class="card-header">
-      <span class="card-title">1. MODEL ARCHITECTURE MATRIX</span>
+      <span class="card-title">1. ARQUITETURA DO MODELO</span>
       <span class="badge-cyan">{{ modelTag }}</span>
     </div>
 
     <div class="selector-group">
-      <div class="selector-label">MODEL FAMILY</div>
+      <div class="selector-label">FAMILIA YOLO</div>
       <div class="pills-container">
         <button
           v-for="f in FAMILIES"
@@ -59,7 +57,7 @@ const modelTag = computed(() => {
     </div>
 
     <div class="selector-group">
-      <div class="selector-label">SCALE & COMPLEXITY</div>
+      <div class="selector-label">ESCALA & COMPLEXIDADE</div>
       <div class="pills-container">
         <button
           v-for="s in SCALES"
@@ -74,7 +72,7 @@ const modelTag = computed(() => {
     </div>
 
     <div class="selector-group" style="margin-bottom: 0;">
-      <div class="selector-label">VISION TASK</div>
+      <div class="selector-label">TAREFA DE VISAO</div>
       <div class="pills-container">
         <button
           v-for="t in TASKS"

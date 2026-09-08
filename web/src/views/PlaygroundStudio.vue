@@ -48,8 +48,8 @@ const handleInference = async () => {
 <template>
   <div class="view-container playground-container">
     <div class="cockpit-full-header">
-      <h1 class="cockpit-main-title">KIROSHI PLAYGROUND // REALTIME TRACKER</h1>
-      <p class="cockpit-main-subtitle">HARDWARE NATIVO RTX 5090 // FLUXO CONTÍNUO HYDRASTREAM // BBOX REALTIME</p>
+      <h1 class="cockpit-main-title">PLAYGROUND DE INFERENCIA & TRACKING</h1>
+      <p class="cockpit-main-subtitle">HARDWARE NATIVO RTX 5090 // FLUXO CONTINUO HYDRASTREAM // INFERENCIA AO VIVO</p>
     </div>
 
     <div class="playground-layout">

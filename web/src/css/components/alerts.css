@@ -1,17 +1,17 @@
 /* ==========================================================================
-   CYBERPUNK ALERT BANNERS, BADGES & CONFIRMATION MODALS (< 100 LINES)
+   3-COLOR ALERT BANNERS & MODALS (ORANGE, WHITE, GRAY) (< 100 LINES)
    ========================================================================== */
 
-.cyber-alerts-banner {
-  background: rgba(255, 0, 85, 0.1);
-  border: 1px solid var(--cb-magenta);
-  border-left: 4px solid var(--cb-magenta);
-  padding: 0.85rem 1.25rem;
+.cyber-alerts-banner, .vms-alert-banner {
+  background: rgba(255, 94, 58, 0.08);
+  border: 1px solid rgba(255, 94, 58, 0.25);
+  border-left: 3px solid var(--vms-primary);
+  padding: 0.75rem 1.1rem;
   margin-bottom: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+  border-radius: var(--vms-radius-sm);
 }
 
 .cyber-alert-badge {
@@ -19,73 +19,63 @@
   padding: 0.15rem 0.4rem;
   font-family: var(--font-mono);
   font-size: 0.7rem;
-  font-weight: bold;
+  font-weight: 700;
   text-transform: uppercase;
-  background-color: var(--cb-magenta);
-  color: #fff;
+  background-color: var(--vms-primary);
+  color: #ffffff;
+  border-radius: var(--vms-radius-sm);
   margin-right: 0.5rem;
 }
+.cyber-alert-badge.warning, .cyber-alert-badge.cyan { background-color: var(--vms-primary); color: #ffffff; }
 
-.cyber-alert-badge.warning { background-color: var(--cb-yellow); color: #000; }
-.cyber-alert-badge.cyan { background-color: var(--cb-cyan); color: #07080c; }
-
-/* Cyberpunk Interactive Alert & Confirm Modal */
-.cyber-alert-overlay {
+/* Interactive Alert & Confirm Modal */
+.cyber-alert-overlay, .vms-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 6, 10, 0.88);
-  backdrop-filter: blur(8px);
+  background: rgba(7, 8, 12, 0.75);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
 }
 
-.cyber-alert-box {
+.cyber-alert-box, .vms-modal-box {
   position: relative;
-  background: #0c0f17;
-  border: 1px solid var(--cb-magenta);
-  box-shadow: 0 0 35px rgba(255, 0, 85, 0.3), inset 0 0 20px rgba(255, 0, 85, 0.08);
+  background: var(--vms-bg-surface);
+  border: 1px solid var(--vms-border-light);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
   width: 90%;
   max-width: 480px;
   padding: 1.5rem;
-  border-radius: 4px;
+  border-radius: var(--vms-radius-lg);
 }
 
-.cyber-alert-box.cyan {
-  border-color: var(--cb-cyan);
-  box-shadow: 0 0 35px rgba(0, 240, 255, 0.3), inset 0 0 20px rgba(0, 240, 255, 0.08);
-}
-
-.cyber-alert-box.yellow {
-  border-color: var(--cb-yellow);
-  box-shadow: 0 0 35px rgba(252, 238, 10, 0.3), inset 0 0 20px rgba(252, 238, 10, 0.08);
-}
+.cyber-alert-box.cyan, .cyber-alert-box.yellow { border-color: rgba(255, 94, 58, 0.4); }
 
 .cyber-alert-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--vms-border);
   padding-bottom: 0.75rem;
   margin-bottom: 1rem;
 }
 
 .cyber-alert-title {
-  font-family: var(--font-oxanium);
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #fff;
+  font-family: var(--font-inter);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--vms-text-main);
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .cyber-alert-body {
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  color: #cbd5e1;
+  font-family: var(--font-roboto);
+  font-size: 0.85rem;
+  color: var(--vms-text-regular);
   line-height: 1.5;
   margin-bottom: 1.25rem;
 }

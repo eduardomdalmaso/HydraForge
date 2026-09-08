@@ -10,10 +10,10 @@ withDefaults(defineProps<{
   checkboxChecked?: boolean
   isProcessing?: boolean
 }>(), {
-  title: 'SYSTEM ALERT',
+  title: 'AVISO DO SISTEMA',
   type: 'danger',
-  confirmText: 'CONFIRM',
-  cancelText: 'ABORT',
+  confirmText: 'CONFIRMAR',
+  cancelText: 'CANCELAR',
   checkboxChecked: false,
   isProcessing: false
 })
@@ -32,17 +32,11 @@ const emit = defineEmits<{
       :class="{ cyan: type === 'cyan', yellow: type === 'yellow' }"
       @click.stop
     >
-      <div class="hud-corner-tl" />
-      <div class="hud-corner-br" />
-
       <div class="cyber-alert-header">
         <div class="cyber-alert-title">
-          <span class="cyber-hud-tag">
-            {{ type === 'danger' ? '[ALERT]' : (type === 'yellow' ? '[WARN]' : '[INFO]') }}
-          </span>
           <span>{{ title }}</span>
         </div>
-        <button class="cyber-pill" style="padding: 0.15rem 0.45rem; font-size: 0.7rem;" @click="emit('close')">
+        <button class="pagination-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem;" @click="emit('close')">
           ✕
         </button>
       </div>
@@ -53,9 +47,9 @@ const emit = defineEmits<{
 
       <div
         v-if="checkboxLabel"
-        style="margin: 0.75rem 0 1.25rem; padding: 0.5rem 0.65rem; background: rgba(255, 0, 85, 0.08); border: 1px dashed rgba(255, 0, 85, 0.3); border-radius: 3px;"
+        style="margin: 0.75rem 0 1.25rem; padding: 0.5rem 0.65rem; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--vms-border); border-radius: var(--vms-radius-sm);"
       >
-        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.78rem; color: #fff; font-family: var(--font-mono);">
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.78rem; color: #fff; font-family: var(--font-inter);">
           <input
             type="checkbox"
             :checked="checkboxChecked"
@@ -71,11 +65,11 @@ const emit = defineEmits<{
         </button>
         <button
           class="cyber-action-btn"
-          :style="type === 'danger' ? { background: 'var(--cb-magenta)', borderColor: 'var(--cb-magenta)', color: '#fff' } : {}"
+          :class="{ danger: type === 'danger' }"
           :disabled="isProcessing"
           @click="emit('confirm')"
         >
-          {{ isProcessing ? 'PROCESSING...' : confirmText }}
+          {{ isProcessing ? 'PROCESSANDO...' : confirmText }}
         </button>
       </div>
     </div>
