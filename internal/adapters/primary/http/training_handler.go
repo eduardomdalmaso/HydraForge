@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"math/rand"
 	"net/http"
 	"os"
@@ -812,9 +813,9 @@ func (h *TrainingHandler) HandleModels(w http.ResponseWriter, r *http.Request) {
 	jobs, err := h.useCase.ListTrainingJobs(r.Context(), "")
 	if err == nil {
 		for _, j := range jobs {
-			mapScore := j.BestMAP50 * 72.0
+			mapScore := math.Round(j.BestMAP50*72.0*100) / 100
 			if mapScore == 0 {
-				mapScore = 48.5
+				mapScore = 48.50
 			}
 			customItem := ModelZooItem{
 				ID:          j.JobID,

@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -208,6 +209,9 @@ func HandleInferenceLiveStream(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "data: %s\n\n", line)
 			flusher.Flush()
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("[HydraForge] Scanner error in analytics stream: %v", err)
 	}
 }
 
