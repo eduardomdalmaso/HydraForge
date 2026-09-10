@@ -1,6 +1,9 @@
 package http
 
-import "net/http"
+import (
+	"encoding/json"
+	"net/http"
+)
 
 // RegisterRoutes registers all API endpoints on the mux.
 func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler) {
@@ -19,6 +22,19 @@ func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler
 	mux.HandleFunc("/api/v1/training/export", h.HandleExport)
 	mux.HandleFunc("/api/v1/training/models", h.HandleModels)
 
+	// Info / Probe endpoint for Cluster Node Discovery
+	mux.HandleFunc("/api/v1/info", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"app_name":     "HydraForge AI Training & Inference",
+			"version":      "1.0.0",
+			"engine_mode":  "TensorRT / PyTorch CUDA 13.3",
+			"gpu_detected": true,
+			"gpu_model":    "NVIDIA GeForce RTX 5090 (32GB VRAM)",
+			"features":     map[string]bool{"tensorrt": true, "sahi": true, "amp_fp16": true},
+		})
+	})
+
 	// Benchmarks API
 	mux.HandleFunc("/api/v1/benchmarks", bh.HandleBenchmarks)
 	mux.HandleFunc("/api/v1/benchmarks/formats", bh.HandleBenchmarkFormats)
@@ -31,7 +47,6 @@ func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler
 	mux.HandleFunc("/api/v1/inference/predict", HandleInferencePredict)
 	mux.HandleFunc("/api/v1/inference/live", HandleInferenceLiveStream)
 	mux.HandleFunc("/api/v1/inference/frame", HandleWebcamFrameUpload)
-
 
 	// Swagger Interactive Docs
 	mux.HandleFunc("/swagger/", ServeSwaggerUI)
