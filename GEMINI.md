@@ -1,10 +1,16 @@
-# HydraStream & HydraForge Project Guidelines (GEMINI.md)
+# HydraForge Project Guidelines (GEMINI.md)
 
-Este documento define a arquitetura, design system, catálogo de skills, pipelines de dados/IA, rotinas de testes, validação rigorosa de parâmetros e protocolo de auto-reparo do ecossistema **HydraStream** (Control Plane & Ingestão Zero-Copy) e **HydraForge** (Estúdio de Treinamento YOLO).
+Este documento define a arquitetura, design system, catálogo de skills, pipelines de treinamento/exportação de IA e protocolo de auto-reparo do **HydraForge** (Estúdio e Laboratório de Treinamento YOLO na NVIDIA RTX 5090 que alimenta o Marketplace de Plugins do ecossistema Hydra).
 
 ---
 
-## 1. Filosofia de Engenharia e Estrutura Arquitetural
+## 0. Papel no Ecossistema & Cadeia de Valor de IA
+
+O **HydraForge** é o **Laboratório de IA (Foundry)** do ecossistema:
+1. **Treinamento SOTA na RTX 5090:** Recebe datasets curados do **HydraVault** e executa loops de treino de alta velocidade com AMP FP16 e otimização AdamW.
+2. **Compilação TensorRT:** Exporta pesos compilados estáticos (`.engine`) calibrados para microarquiteturas de GPU.
+3. **Alimentação do Marketplace:** Os modelos gerados são empacotados com manifestos `plugin.json` e publicados no **Hugging Face Hub** (`huggingface.co/hydra-vision`) e **GitHub Releases**, permitindo que servidores **HydraVMS** em produção instalem ou atualizem analíticos com 1-clique.
+
 
 O projeto segue estritamente a **Arquitetura Hexagonal (Ports & Adapters)** combinada com **Domain-Driven Design (DDD)**:
 
