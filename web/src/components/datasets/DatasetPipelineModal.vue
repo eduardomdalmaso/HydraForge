@@ -97,13 +97,32 @@ const handleExecutePipeline = async () => {
 
       <!-- STEP 3: K-FOLD CROSS-VALIDATION -->
       <div v-else-if="activeStep === 3" style="display: flex; flex-direction: column; gap: 0.85rem;">
-        <div class="telemetry-row"><span class="k">NÚMERO DE FOLDS (K-FOLDS)</span><span class="v">{{ kfoldCount }}-FOLD ESTRATIFICADO</span></div>
-        <div class="telemetry-row"><span class="k">SPLIT TRAIN / VALIDATION</span><span class="v">{{ splitTrainRatio }}% / {{ 100 - splitTrainRatio }}%</span></div>
-        <div class="kfold-bar" style="height: 10px;">
-          <div class="kfold-seg-train" :style="{ width: `${splitTrainRatio}%` }"></div>
-          <div class="kfold-seg-val" :style="{ width: `${100 - splitTrainRatio}%` }"></div>
+        <div>
+          <div class="text-mono" style="font-size: 0.7rem; color: #8b94a0; margin-bottom: 0.35rem;">NÚMERO DE FOLDS (CROSS-VALIDATION):</div>
+          <div style="display: flex; gap: 0.4rem;">
+            <button v-for="k in [1, 3, 5, 10]" :key="k" class="cyber-pill" :class="{ active: kfoldCount === k }" style="flex: 1; padding: 0.4rem 0.2rem; font-size: 0.72rem; text-align: center;" @click="kfoldCount = k">
+              {{ k === 1 ? '[SEM FOLDS / DIRETO]' : `[${k}-FOLDS ESTRATIFICADO]` }}
+            </button>
+          </div>
         </div>
-        <div class="telemetry-row"><span class="k">RANDOM SEED (REPRODUTIBILIDADE)</span><span class="v">SEED={{ kfoldSeed }}</span></div>
+
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <span class="text-mono" style="font-size: 0.7rem; color: #8b94a0;">DIVISÃO TREINO / VALIDAÇÃO:</span>
+            <span class="text-mono" style="font-size: 0.75rem; color: var(--vms-primary); font-weight: 700;">{{ splitTrainRatio }}% TREINO / {{ 100 - splitTrainRatio }}% VALIDAÇÃO</span>
+          </div>
+          <input v-model.number="splitTrainRatio" type="range" min="50" max="95" step="5" style="width: 100%; accent-color: var(--vms-primary); cursor: pointer;" />
+          <div class="kfold-bar" style="height: 10px; margin-top: 0.4rem;">
+            <div class="kfold-seg-train" :style="{ width: `${splitTrainRatio}%` }"></div>
+            <div class="kfold-seg-val" :style="{ width: `${100 - splitTrainRatio}%` }"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <span class="text-mono" style="font-size: 0.72rem; color: #8b94a0;">RANDOM SEED:</span>
+          <input v-model.number="kfoldSeed" type="number" style="width: 90px; background: #040609; border: 1px solid var(--vms-border); color: #fff; padding: 0.25rem 0.5rem; font-size: 0.75rem; border-radius: 4px; font-family: var(--font-mono);" />
+          <button class="cyber-pill" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;" @click="kfoldSeed = Math.floor(Math.random() * 9000 + 1000)">[GERAR SEED]</button>
+        </div>
       </div>
 
       <!-- STEP 4: QUALITY AUDITOR & LEAKAGE DEFENSE -->

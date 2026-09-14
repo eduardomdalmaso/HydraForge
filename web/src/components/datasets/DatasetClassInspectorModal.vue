@@ -44,7 +44,7 @@ watch(() => selectedClass.value, () => { if (props.isOpen) fetchClassSamples() }
 
 const currentSample = computed(() => sampleList.value[sampleIndex.value] || null)
 
-const getBBoxStyle = (bbox: number[]) => {
+const getBBoxStyle = (bbox: number[], isTarget = true) => {
   if (!bbox || bbox.length < 4) return {}
   const [x, y, w, h] = bbox
   return {
@@ -53,12 +53,27 @@ const getBBoxStyle = (bbox: number[]) => {
     top: `${(y - h / 2) * 100}%`,
     width: `${w * 100}%`,
     height: `${h * 100}%`,
-    border: '2px solid var(--vms-primary, #ff5e3a)',
-    backgroundColor: 'rgba(255, 94, 58, 0.25)',
+    border: isTarget ? '2px solid var(--vms-primary, #ff5e3a)' : '1px dashed rgba(0, 240, 255, 0.45)',
+    backgroundColor: isTarget ? 'rgba(255, 94, 58, 0.25)' : 'rgba(0, 240, 255, 0.05)',
     boxSizing: 'border-box' as const,
-    pointerEvents: 'none' as const
+    pointerEvents: 'none' as const,
+    zIndex: isTarget ? 3 : 1
   }
 }
+
+const getBadgeStyle = (isTarget = true) => ({
+  position: 'absolute' as const,
+  top: '-18px',
+  left: '-2px',
+  background: isTarget ? 'var(--vms-primary)' : 'rgba(0, 240, 255, 0.75)',
+  color: '#fff',
+  fontSize: '0.62rem',
+  fontFamily: 'monospace',
+  fontWeight: 'bold' as const,
+  padding: '1px 4px',
+  borderRadius: '2px',
+  whiteSpace: 'nowrap' as const
+})
 
 const nextSample = () => {
   if (sampleList.value.length > 1) sampleIndex.value = (sampleIndex.value + 1) % sampleList.value.length
@@ -121,11 +136,17 @@ const prevSample = () => {
             </div>
             <div v-else-if="currentSample?.image_url" style="position: relative; display: inline-block; max-width: 100%; max-height: 290px;">
               <img :src="currentSample.image_url" style="max-width: 100%; max-height: 290px; display: block; object-fit: contain; border-radius: 3px;" />
-              <div v-if="currentSample?.bbox" :style="getBBoxStyle(currentSample.bbox)">
-                <span style="position: absolute; top: -18px; left: -2px; background: var(--vms-primary); color: #fff; font-size: 0.62rem; font-family: monospace; font-weight: bold; padding: 1px 4px; border-radius: 2px; white-space: nowrap;">
-                  {{ selectedClass }}
-                </span>
-              </div>
+              <!-- ALL ANNOTATIONS -->
+              <template v-if="currentSample.annotations && currentSample.annotations.length > 0">
+                <div v-for="(ann, aIdx) in currentSample.annotations" :key="aIdx" :style="getBBoxStyle(ann.bbox, ann.is_target)">
+                  <span :style="getBadgeStyle(ann.is_target)">{{ ann.class_name || (ann.is_target ? selectedClass : `class_${ann.class_id}`) }}</span>
+                </div>
+              </template>
+              <template v-else-if="currentSample?.bbox">
+                <div :style="getBBoxStyle(currentSample.bbox, true)">
+                  <span :style="getBadgeStyle(true)">{{ selectedClass }}</span>
+                </div>
+              </template>
             </div>
             <div v-else style="color: #64748b; font-family: var(--font-mono); font-size: 0.75rem;">
               Nenhuma anotação disponível para esta classe.

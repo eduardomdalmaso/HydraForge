@@ -21,6 +21,7 @@ withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'confirm'): void
   (e: 'close'): void
+  (e: 'update:checkboxChecked', checked: boolean): void
   (e: 'toggleCheckbox', checked: boolean): void
 }>()
 </script>
@@ -53,7 +54,11 @@ const emit = defineEmits<{
           <input
             type="checkbox"
             :checked="checkboxChecked"
-            @change="(e) => emit('toggleCheckbox', (e.target as HTMLInputElement).checked)"
+            @change="(e) => {
+              const val = (e.target as HTMLInputElement).checked
+              emit('update:checkboxChecked', val)
+              emit('toggleCheckbox', val)
+            }"
           />
           <span>{{ checkboxLabel }}</span>
         </label>

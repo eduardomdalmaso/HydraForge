@@ -9,7 +9,7 @@ export function useDatasetStudio(propsDatasets: Ref<DatasetInfo[] | undefined>) 
   const isAnnotateOpen = ref(false)
   const isMergeOpen = ref(false)
   const deleteTarget = ref<any>(null)
-  const deleteDisk = ref(false)
+  const deleteDisk = ref(true)
   const isDeleting = ref(false)
 
   const globalMappings = ref<Record<string, any>>(() => {
