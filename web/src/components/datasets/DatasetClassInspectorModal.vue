@@ -1,25 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 
-const props = defineProps<{
-  isOpen: boolean
-  dataset: any | null
-}>()
-
-const emit = defineEmits<{
-  (e: 'close'): void
-  (e: 'train', dataset: any): void
-}>()
+const props = defineProps<{ isOpen: boolean; dataset: any | null }>()
+const emit = defineEmits<{(e: 'close'): void; (e: 'train', dataset: any): void}>()
 
 const selectedClass = ref<string>('')
 const sampleIndex = ref(0)
 const sampleList = ref<any[]>([])
 const isLoading = ref(false)
 
-const classesList = computed(() => {
-  if (!props.dataset) return []
-  return props.dataset.classes || []
-})
+const classesList = computed(() => props.dataset?.classes || [])
 
 const fetchClassSamples = async () => {
   if (!props.dataset || !selectedClass.value) return
@@ -28,12 +18,7 @@ const fetchClassSamples = async () => {
   try {
     const dsId = props.dataset.id || props.dataset.dataset_id
     const res = await fetch(`/api/v1/training/datasets/sample?id=${encodeURIComponent(dsId)}&class=${encodeURIComponent(selectedClass.value)}&t=${Date.now()}`)
-    if (res.ok) {
-      const data = await res.json()
-      sampleList.value = Array.isArray(data) ? data : (data ? [data] : [])
-    } else {
-      sampleList.value = []
-    }
+    sampleList.value = res.ok ? await res.json() : []
   } catch {
     sampleList.value = []
   } finally {
@@ -50,24 +35,32 @@ watch(() => [props.isOpen, props.dataset], () => {
   }
 })
 
-watch(() => selectedClass.value, () => {
-  if (props.isOpen) fetchClassSamples()
-})
+watch(() => selectedClass.value, () => { if (props.isOpen) fetchClassSamples() })
 
 const currentSample = computed(() => sampleList.value[sampleIndex.value] || null)
 
-const nextSample = () => {
-  if (sampleList.value.length > 1) {
-    sampleIndex.value = (sampleIndex.value + 1) % sampleList.value.length
-  } else {
-    fetchClassSamples()
+const getBBoxStyle = (bbox: number[]) => {
+  if (!bbox || bbox.length < 4) return {}
+  const [x, y, w, h] = bbox
+  return {
+    position: 'absolute' as const,
+    left: `${(x - w / 2) * 100}%`,
+    top: `${(y - h / 2) * 100}%`,
+    width: `${w * 100}%`,
+    height: `${h * 100}%`,
+    border: '2px solid var(--vms-primary, #ff5e3a)',
+    backgroundColor: 'rgba(255, 94, 58, 0.25)',
+    boxSizing: 'border-box' as const,
+    pointerEvents: 'none' as const
   }
 }
 
+const nextSample = () => {
+  if (sampleList.value.length > 1) sampleIndex.value = (sampleIndex.value + 1) % sampleList.value.length
+  else fetchClassSamples()
+}
 const prevSample = () => {
-  if (sampleList.value.length > 1) {
-    sampleIndex.value = (sampleIndex.value - 1 + sampleList.value.length) % sampleList.value.length
-  }
+  if (sampleList.value.length > 1) sampleIndex.value = (sampleIndex.value - 1 + sampleList.value.length) % sampleList.value.length
 }
 </script>
 
@@ -99,9 +92,7 @@ const prevSample = () => {
               style="margin-bottom: 0; padding: 0.45rem 0.65rem; cursor: pointer;"
               @click="selectedClass = cls"
             >
-              <div class="text-mono" style="font-size: 0.78rem; font-weight: 600;">
-                #{{ idx }} {{ cls }}
-              </div>
+              <div class="text-mono" style="font-size: 0.78rem; font-weight: 600;">#{{ idx }} {{ cls }}</div>
               <span v-if="selectedClass === cls" class="badge-yellow" style="font-size: 0.6rem; padding: 1px 4px;">FOTO ATIVA</span>
             </div>
           </div>
@@ -118,27 +109,14 @@ const prevSample = () => {
             </span>
           </div>
 
-          <!-- PHOTO CANVAS (NATURAL ASPECT RATIO ALIGNMENT) -->
+          <!-- PHOTO CANVAS -->
           <div style="flex: 1; min-height: 280px; background: #010204; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; padding: 0.5rem;">
             <div v-if="isLoading" style="color: var(--vms-primary); font-family: var(--font-mono); font-size: 0.8rem;">
               CARREGANDO FOTO DO DATASET...
             </div>
             <div v-else-if="currentSample?.image_url" style="position: relative; display: inline-block; max-width: 100%; max-height: 290px;">
               <img :src="currentSample.image_url" style="max-width: 100%; max-height: 290px; display: block; object-fit: contain; border-radius: 3px;" />
-              <div
-                v-if="currentSample?.bbox"
-                :style="{
-                  position: 'absolute',
-                  left: `${(currentSample.bbox[0] - currentSample.bbox[2] / 2) * 100}%`,
-                  top: `${(currentSample.bbox[1] - currentSample.bbox[3] / 2) * 100}%`,
-                  width: `${currentSample.bbox[2] * 100}%`,
-                  height: `${currentSample.bbox[3] * 100}%`,
-                  border: '2px solid var(--vms-primary, #ff5e3a)',
-                  backgroundColor: 'rgba(255, 94, 58, 0.25)',
-                  boxSizing: 'border-box',
-                  pointerEvents: 'none'
-                }"
-              >
+              <div v-if="currentSample?.bbox" :style="getBBoxStyle(currentSample.bbox)">
                 <span style="position: absolute; top: -18px; left: -2px; background: var(--vms-primary); color: #fff; font-size: 0.62rem; font-family: monospace; font-weight: bold; padding: 1px 4px; border-radius: 2px; white-space: nowrap;">
                   {{ selectedClass }}
                 </span>
