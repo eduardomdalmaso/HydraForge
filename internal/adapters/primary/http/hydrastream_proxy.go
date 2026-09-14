@@ -25,12 +25,20 @@ func HydraStreamProxy(targetURL string) http.HandlerFunc {
 			req.URL.Path = "/" + req.URL.Path
 		}
 		req.Host = target.Host
+
+		// Forward security headers
+		if auth := req.Header.Get("Authorization"); auth != "" {
+			req.Header.Set("Authorization", auth)
+		}
+		if apiKey := req.Header.Get("X-API-Key"); apiKey != "" {
+			req.Header.Set("X-API-Key", apiKey)
+		}
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
 			return

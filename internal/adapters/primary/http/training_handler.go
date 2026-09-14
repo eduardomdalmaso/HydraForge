@@ -448,14 +448,23 @@ func (h *TrainingHandler) HandleDatasetImport(w http.ResponseWriter, r *http.Req
 
 		cleanBase := strings.TrimSuffix(fileHeader.Filename, filepath.Ext(fileHeader.Filename))
 		cleanBase = strings.ToLower(strings.ReplaceAll(cleanBase, " ", "_"))
-		targetDir := filepath.Join(datasetsDir, cleanBase)
+		targetDir := filepath.Clean(filepath.Join(datasetsDir, cleanBase))
 		_ = os.MkdirAll(targetDir, 0755)
 
-		// Unzip
+		// Unzip with strict Zip Slip protection
 		rZip, err := zip.OpenReader(tmpZip.Name())
 		if err == nil {
 			for _, f := range rZip.File {
-				fpath := filepath.Join(targetDir, f.Name)
+				// 1. Disallow path traversal sequences
+				if strings.Contains(f.Name, "..") {
+					continue
+				}
+				fpath := filepath.Clean(filepath.Join(targetDir, f.Name))
+				// 2. Validate that destination resides strictly inside targetDir
+				if !strings.HasPrefix(fpath, targetDir+string(filepath.Separator)) && fpath != targetDir {
+					continue
+				}
+
 				if f.FileInfo().IsDir() {
 					os.MkdirAll(fpath, os.ModePerm)
 					continue
@@ -516,21 +525,31 @@ func (h *TrainingHandler) HandleDatasetRegisterPath(w http.ResponseWriter, r *ht
 		return
 	}
 
-	fi, err := os.Stat(req.Path)
+	cleanReqPath := filepath.Clean(req.Path)
+	// Block sensitive system directories
+	disallowedPrefixes := []string{"/etc", "/root", "/proc", "/sys", "/dev", "/boot", "/var/run", "/usr", "/bin", "/sbin"}
+	for _, p := range disallowedPrefixes {
+		if strings.HasPrefix(cleanReqPath, p) {
+			http.Error(w, `{"error":"forbidden system directory path"}`, http.StatusForbidden)
+			return
+		}
+	}
+
+	fi, err := os.Stat(cleanReqPath)
 	if err != nil || !fi.IsDir() {
-		http.Error(w, fmt.Sprintf(`{"error":"directory not found: %s"}`, req.Path), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf(`{"error":"directory not found: %s"}`, cleanReqPath), http.StatusBadRequest)
 		return
 	}
 
 	id := req.DatasetID
 	if id == "" {
-		id = filepath.Base(req.Path)
+		id = filepath.Base(cleanReqPath)
 	}
 	id = strings.ToLower(strings.ReplaceAll(id, " ", "_"))
 
 	targetLink := filepath.Join("/home/hades/datasets", id)
-	if _, err := os.Stat(targetLink); err != nil && targetLink != req.Path {
-		_ = os.Symlink(req.Path, targetLink)
+	if _, err := os.Stat(targetLink); err != nil && targetLink != cleanReqPath {
+		_ = os.Symlink(cleanReqPath, targetLink)
 	}
 
 	datasets, err := h.useCase.RescanDatasets(r.Context())

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -20,9 +21,12 @@ func main() {
 	log.Println("🚀 [HydraForge] Initializing YOLO AI Training Studio (Hexagonal Architecture + DDD)...")
 
 	// 1. Initialize Persistent Secondary Adapters (Driven)
-	dbPath := "/home/hades/Documents/HydraForge/datasets/hydraforge.db"
-	if _, err := os.Stat("datasets/hydraforge.db"); err == nil {
-		dbPath = "datasets/hydraforge.db"
+	dbPath := os.Getenv("SQLITE_DB_PATH")
+	if dbPath == "" {
+		dbPath = "/home/hades/Documents/HydraForge/datasets/hydraforge.db"
+		if _, err := os.Stat("datasets/hydraforge.db"); err == nil {
+			dbPath = "datasets/hydraforge.db"
+		}
 	}
 	sqlStore, err := sqlite.NewSQLiteStore(dbPath)
 	if err != nil {
@@ -42,28 +46,33 @@ func main() {
 	// 3. Initialize Application Service (Use Case)
 	trainingService := application.NewTrainingService(sqlStore, sqlStore, sqlStore, sqlStore, pyWorker, gpuDetector)
 
-
 	// 4. Initialize Primary HTTP Adapter (Driving)
 	handler := primaryHttp.NewTrainingHandler(trainingService)
 	bmkHandler := primaryHttp.NewBenchmarkHandler(trainingService)
 	mux := http.NewServeMux()
 	primaryHttp.RegisterRoutes(mux, handler, bmkHandler)
 
-
 	// Static SPA Web UI
 	mux.Handle("/", http.FileServer(http.Dir("./web/dist")))
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = ":8081"
+	} else if !strings.HasPrefix(port, ":") {
+		port = ":" + port
+	}
+
 	server := &http.Server{
-		Addr:         ":8081",
-		Handler:      mux,
+		Addr:         port,
+		Handler:      primaryHttp.WithCORS(mux),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
 	go func() {
-		log.Printf("🌐 [HydraForge] Training Studio & REST Control Plane listening on http://localhost:8081")
-		log.Printf("📖 [HydraForge] Swagger API Docs available at http://localhost:8081/swagger/")
+		log.Printf("🌐 [HydraForge] Training Studio & REST Control Plane listening on http://localhost%s", port)
+		log.Printf("📖 [HydraForge] Swagger API Docs available at http://localhost%s/swagger/", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server error: %v", err)
 		}

@@ -78,6 +78,21 @@ func HandleInferencePredict(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Validate device and model to prevent command/argument injection
+	cleanDevice := strings.TrimSpace(req.Device)
+	if cleanDevice != "cpu" {
+		if _, err := strconv.Atoi(cleanDevice); err != nil {
+			cleanDevice = "0"
+		}
+	}
+	req.Device = cleanDevice
+
+	cleanModel := filepath.Base(req.Model)
+	if cleanModel == "" || strings.Contains(cleanModel, "..") {
+		cleanModel = "yolo26n.pt"
+	}
+	req.Model = cleanModel
+
 	// Resolve model weight path
 	modelFile := resolveModelWeights(req.Model)
 

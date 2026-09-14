@@ -165,6 +165,10 @@ func (s *SQLiteStore) migrate() error {
 	_, _ = s.db.Exec(`ALTER TABLE training_jobs ADD COLUMN current_batch INTEGER DEFAULT 0;`)
 	_, _ = s.db.Exec(`ALTER TABLE training_jobs ADD COLUMN total_batches INTEGER DEFAULT 0;`)
 	_, _ = s.db.Exec(`ALTER TABLE training_jobs ADD COLUMN best_map50_95 REAL DEFAULT 0.0;`)
+	_, _ = s.db.Exec(`ALTER TABLE training_jobs ADD COLUMN tenant_id TEXT DEFAULT 'default';`)
+	_, _ = s.db.Exec(`ALTER TABLE registered_datasets ADD COLUMN tenant_id TEXT DEFAULT 'default';`)
+	_, _ = s.db.Exec(`ALTER TABLE model_checkpoints ADD COLUMN tenant_id TEXT DEFAULT 'default';`)
+	_, _ = s.db.Exec(`ALTER TABLE benchmark_jobs ADD COLUMN tenant_id TEXT DEFAULT 'default';`)
 	_, _ = s.db.Exec(`ALTER TABLE benchmark_jobs ADD COLUMN model TEXT DEFAULT '';`)
 	_, _ = s.db.Exec(`ALTER TABLE benchmark_jobs ADD COLUMN data TEXT DEFAULT '';`)
 	return nil
