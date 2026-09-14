@@ -2,7 +2,7 @@
    3-COLOR MODEL ZOO STUDIO CSS (ORANGE, WHITE, GRAY) (< 100 LINES)
    ========================================================================== */
 
-.zoo-container { display: flex; flex-direction: column; width: 100%; max-width: 1650px; margin: 0 auto; gap: 1.25rem; }
+.zoo-container { display: flex; flex-direction: column; width: 100%; max-width: 100%; margin: 0; gap: 1.25rem; }
 .zoo-layout { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.25rem; width: 100%; align-items: start; }
 .zoo-layout > div { min-width: 0; }
 @media (max-width: 1200px) { .zoo-layout { grid-template-columns: 1fr; } }

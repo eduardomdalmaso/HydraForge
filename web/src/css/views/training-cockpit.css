@@ -2,7 +2,7 @@
    CLEAN SLATE DARK TRAINING COCKPIT STYLES (< 100 LINES)
    ========================================================================== */
 
-.cockpit-container { display: flex; flex-direction: column; width: 100%; max-width: 1650px; margin: 0 auto; }
+.cockpit-container { display: flex; flex-direction: column; width: 100%; max-width: 100%; margin: 0; }
 
 .cockpit-full-header {
   width: 100%; text-align: left; padding: 1.1rem 1.4rem; background: var(--vms-bg-surface);

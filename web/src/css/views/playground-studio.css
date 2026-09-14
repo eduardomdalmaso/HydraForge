@@ -2,7 +2,7 @@
    3-COLOR PLAYGROUND STUDIO CSS (ORANGE, WHITE, GRAY) (< 100 LINES)
    ========================================================================== */
 
-.playground-container { display: flex; flex-direction: column; width: 100%; max-width: 1650px; margin: 0 auto; gap: 1.25rem; }
+.playground-container { display: flex; flex-direction: column; width: 100%; max-width: 100%; margin: 0; gap: 1.25rem; }
 .playground-layout { display: grid; grid-template-columns: 340px 1fr 340px; gap: 1.25rem; width: 100%; align-items: start; }
 @media (max-width: 1300px) { .playground-layout { grid-template-columns: 320px 1fr; } }
 @media (max-width: 900px) { .playground-layout { grid-template-columns: 1fr; } }

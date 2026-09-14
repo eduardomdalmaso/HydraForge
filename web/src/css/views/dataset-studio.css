@@ -2,7 +2,7 @@
    CLEAN SLATE DARK DATASET STUDIO CSS (< 100 LINES)
    ========================================================================== */
 
-.datasets-container { display: flex; flex-direction: column; width: 100%; max-width: 1650px; margin: 0 auto; gap: 1.25rem; }
+.datasets-container { display: flex; flex-direction: column; width: 100%; max-width: 100%; margin: 0; gap: 1.25rem; }
 .datasets-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.25rem; width: 100%; align-items: start; }
 @media (max-width: 1100px) { .datasets-grid { grid-template-columns: 1fr; } }
 .ds-list-scroll { max-height: 340px; overflow-y: auto; padding-right: 4px; margin-bottom: 0.85rem; }

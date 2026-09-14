@@ -1,0 +1,176 @@
+/* ==========================================================================
+   SIDEBAR CYBER NAV - CYBERPUNK HUD HIGH-TECH (< 100 LINES)
+   ========================================================================== */
+
+.sidebar-cyber-nav {
+  width: 270px;
+  min-width: 270px;
+  background-color: var(--vms-bg-surface, #0b0e14);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 1.25rem 0.85rem;
+  box-sizing: border-box;
+}
+
+.sidebar-brand-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem 1.25rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+}
+
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand-title {
+  font-family: var(--font-heading, 'Tomorrow', sans-serif);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: #ffffff;
+}
+
+.sidebar-brand-title .brand-forge {
+  color: var(--vms-primary, #ff5e3a);
+  text-shadow: 0 0 10px rgba(255, 94, 58, 0.4);
+}
+
+.sidebar-brand-subtitle {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.65rem;
+  color: #8b94a0;
+  letter-spacing: 0.08em;
+}
+
+.sidebar-nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  flex: 1;
+}
+
+.sidebar-nav-label {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.62rem;
+  color: #525c6c;
+  padding: 0 0.75rem 0.25rem 0.75rem;
+  letter-spacing: 0.1em;
+}
+
+.sidebar-step-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--vms-radius-sm, 4px);
+  color: #8b94a0;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  width: 100%;
+}
+
+.sidebar-step-btn:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-step-btn.active {
+  background: rgba(255, 94, 58, 0.08);
+  border-color: rgba(255, 94, 58, 0.35);
+  color: #ffffff;
+  box-shadow: inset 3px 0 0 var(--vms-primary, #ff5e3a);
+}
+
+.sidebar-step-num {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--vms-primary, #ff5e3a);
+  opacity: 0.8;
+}
+
+.sidebar-step-btn.active .sidebar-step-num {
+  opacity: 1;
+  text-shadow: 0 0 6px rgba(255, 94, 58, 0.5);
+}
+
+.sidebar-step-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-step-title {
+  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.sidebar-step-desc {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.65rem;
+  color: #636d7e;
+  margin-top: 1px;
+}
+
+.sidebar-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sidebar-gpu-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.65rem;
+  background: #121824;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+}
+
+.sidebar-eco-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.sidebar-eco-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.65rem;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.68rem;
+  color: #727e90;
+  text-decoration: none;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+}
+
+.sidebar-eco-link:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+}
+
+.sidebar-eco-port {
+  font-size: 0.62rem;
+  color: #525c6c;
+}

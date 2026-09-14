@@ -45,11 +45,10 @@ body {
 
 .content-body, .main-content {
   flex: 1;
-  padding: 1.25rem 1.5rem;
+  padding: 1.25rem 1.75rem;
   overflow-y: auto;
-  max-width: 1680px;
-  margin: 0 auto;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .text-mono {

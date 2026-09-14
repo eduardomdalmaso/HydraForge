@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import TopCyberNav from './components/TopCyberNav.vue'
+import SidebarCyberNav from './components/SidebarCyberNav.vue'
 import TrainingCockpit from './views/TrainingCockpit.vue'
 import LiveHudStudio from './views/LiveHudStudio.vue'
 import BenchmarkStudio from './views/BenchmarkStudio.vue'
@@ -13,7 +13,7 @@ import type { DatasetInfo } from './types/dataset'
 
 const getInitialTab = () => {
   const hash = window.location.hash.replace('#', '')
-  return hash || 'cockpit'
+  return hash || 'datasets'
 }
 
 const activeTab = ref(getInitialTab())
@@ -23,7 +23,7 @@ let pollTimer: any = null
 
 const handleHashChange = () => {
   const hash = window.location.hash.replace('#', '')
-  activeTab.value = hash || 'cockpit'
+  activeTab.value = hash || 'datasets'
 }
 
 const navigateTo = (tabId: string) => {
@@ -51,23 +51,23 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-layout" style="flex-direction: column;">
-    <TopCyberNav
+  <div class="app-layout" style="flex-direction: row;">
+    <SidebarCyberNav
       :activeTab="activeTab"
       :gpuStats="telemetry?.gpu_stats"
       @selectTab="navigateTo"
     />
-    <main class="content-body">
+    <main class="content-body" style="flex: 1; height: 100vh; overflow-y: auto;">
+      <DatasetStudio v-if="activeTab === 'datasets'" :datasets="datasets" />
       <TrainingCockpit
-        v-if="activeTab === 'cockpit'"
+        v-else-if="activeTab === 'cockpit'"
         :datasets="datasets"
         @jobLaunched="() => navigateTo('live-hud')"
       />
       <LiveHudStudio v-else-if="activeTab === 'live-hud'" />
-      <BenchmarkStudio v-else-if="activeTab === 'benchmarks'" />
-      <DatasetStudio v-else-if="activeTab === 'datasets'" :datasets="datasets" />
-      <PlaygroundStudio v-else-if="activeTab === 'playground'" />
       <ModelZooStudio v-else-if="activeTab === 'model-zoo'" />
+      <PlaygroundStudio v-else-if="activeTab === 'playground'" />
+      <BenchmarkStudio v-else-if="activeTab === 'benchmarks'" />
     </main>
   </div>
 </template>

@@ -2,7 +2,7 @@
    CLEAN SLATE DARK BENCHMARK STUDIO STYLES (< 100 LINES)
    ========================================================================== */
 
-.benchmark-container { display: flex; flex-direction: column; width: 100%; max-width: 1650px; margin: 0 auto; gap: 1.25rem; }
+.benchmark-container { display: flex; flex-direction: column; width: 100%; max-width: 100%; margin: 0; gap: 1.25rem; }
 .benchmark-grid-top { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; width: 100%; align-items: start; }
 @media (max-width: 1100px) { .benchmark-grid-top { grid-template-columns: 1fr; } }
 

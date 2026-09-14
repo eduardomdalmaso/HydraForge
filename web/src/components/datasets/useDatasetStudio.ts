@@ -22,13 +22,20 @@ export function useDatasetStudio(propsDatasets: Ref<DatasetInfo[] | undefined>) 
     try { localStorage.setItem('hydraforge_mappings', JSON.stringify(next)) } catch {}
   }
 
+  const isRescanning = ref(false)
+
   const handleRescan = async () => {
-    const data = await rescanDatasetsAPI()
-    if (data?.length) {
-      datasets.value = data
-      if (!selectedDataset.value || !data.some(d => d.id === selectedDataset.value?.id)) {
-        selectedDataset.value = data[0]
+    isRescanning.value = true
+    try {
+      const data = await rescanDatasetsAPI()
+      if (data?.length) {
+        datasets.value = data
+        if (!selectedDataset.value || !data.some(d => d.id === selectedDataset.value?.id)) {
+          selectedDataset.value = data[0]
+        }
       }
+    } finally {
+      isRescanning.value = false
     }
   }
 
@@ -67,7 +74,7 @@ export function useDatasetStudio(propsDatasets: Ref<DatasetInfo[] | undefined>) 
 
   return {
     datasets, selectedDataset, isModalOpen, isAnnotateOpen, isMergeOpen,
-    deleteTarget, deleteDisk, isDeleting, globalMappings,
+    deleteTarget, deleteDisk, isDeleting, isRescanning, globalMappings,
     saveMapping, handleRescan, confirmDelete
   }
 }

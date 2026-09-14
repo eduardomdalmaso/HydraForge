@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { toRef } from 'vue'
-import DatasetListCard from '../components/datasets/DatasetListCard.vue'
-import DatasetYamlViewer from '../components/datasets/DatasetYamlViewer.vue'
-import DatasetKFoldCard from '../components/datasets/DatasetKFoldCard.vue'
-import DatasetAuditCard from '../components/datasets/DatasetAuditCard.vue'
+import { ref, toRef } from 'vue'
+import DatasetFolderExplorer from '../components/datasets/DatasetFolderExplorer.vue'
+import DatasetPipelineModal from '../components/datasets/DatasetPipelineModal.vue'
+import DatasetClassInspectorModal from '../components/datasets/DatasetClassInspectorModal.vue'
 import DatasetModalsContainer from '../components/datasets/DatasetModalsContainer.vue'
 import { useDatasetStudio } from '../components/datasets/useDatasetStudio'
 import type { DatasetInfo } from '../types/dataset'
@@ -11,11 +10,21 @@ import type { DatasetInfo } from '../types/dataset'
 const props = defineProps<{ datasets?: DatasetInfo[] }>()
 const {
   datasets, selectedDataset, isModalOpen, isAnnotateOpen, isMergeOpen,
-  deleteTarget, deleteDisk, isDeleting, globalMappings,
-  saveMapping, handleRescan, confirmDelete
+  deleteTarget, deleteDisk, isDeleting, isRescanning, globalMappings,
+  handleRescan, confirmDelete
 } = useDatasetStudio(toRef(props, 'datasets'))
 
-const navigate = (hash: string) => {
+const isPipelineOpen = ref(false)
+const isInspectorOpen = ref(false)
+const inspectingDataset = ref<any>(null)
+
+const handleInspect = (ds: any) => {
+  inspectingDataset.value = ds
+  selectedDataset.value = ds
+  isInspectorOpen.value = true
+}
+
+const navigateTo = (hash: string) => {
   if (typeof window !== 'undefined') window.location.hash = hash
 }
 
@@ -28,31 +37,42 @@ const handleDatasetImported = (newDs: any) => {
 <template>
   <div class="view-container datasets-container">
     <div class="cockpit-full-header">
-      <h1 class="cockpit-main-title">ESTUDIO DE DATASETS YOLO</h1>
-      <p class="cockpit-main-subtitle">REPOSITORIO DE DADOS // ESPECIFICACAO YAML // K-FOLD CROSS-VALIDATION & AUDITORIA</p>
+      <h1 class="cockpit-main-title">REPOSITORIO DE DATASETS YOLO</h1>
+      <p class="cockpit-main-subtitle">EXPLORADOR DE PASTAS // INSPECAO VISUAL DE CLASSES COM FOTOS // PIPELINE DE FUSAO EM 4 ETAPAS</p>
     </div>
 
-    <div class="datasets-grid">
-      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-        <DatasetListCard
-          :datasets="datasets"
-          :selectedId="selectedDataset?.id || selectedDataset?.dataset_id"
-          @selectDataset="(ds) => selectedDataset = ds"
-          @openImportModal="isModalOpen = true"
-          @openAnnotateModal="isAnnotateOpen = true"
-          @openMergeModal="isMergeOpen = true"
-          @rescan="handleRescan"
-          @deleteDataset="(ds) => deleteTarget = ds"
-        />
-        <DatasetYamlViewer :dataset="selectedDataset" @saveMappings="saveMapping" />
-      </div>
+    <!-- WINDOWS EXPLORER FOLDER GRID -->
+    <DatasetFolderExplorer
+      :datasets="datasets"
+      :selectedId="selectedDataset?.id || selectedDataset?.dataset_id"
+      :isRescanning="isRescanning"
+      @selectDataset="handleInspect"
+      @inspectClasses="handleInspect"
+      @openPipelineModal="isPipelineOpen = true"
+      @openImportModal="isModalOpen = true"
+      @openAnnotateModal="isAnnotateOpen = true"
+      @rescan="handleRescan"
+      @deleteDataset="(ds) => deleteTarget = ds"
+    />
 
-      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-        <DatasetKFoldCard :dataset="selectedDataset" />
-        <DatasetAuditCard :dataset="selectedDataset" @sendToCockpit="navigate('cockpit')" />
-      </div>
-    </div>
+    <!-- CLASS INSPECTOR MODAL WITH PHOTOS & BBOXES -->
+    <DatasetClassInspectorModal
+      :isOpen="isInspectorOpen"
+      :dataset="inspectingDataset"
+      @close="isInspectorOpen = false"
+      @train="() => navigateTo('cockpit')"
+    />
 
+    <!-- 4-STEP PIPELINE CONFIGURATION MODAL -->
+    <DatasetPipelineModal
+      :isOpen="isPipelineOpen"
+      :datasets="datasets"
+      :savedMappings="globalMappings"
+      @close="isPipelineOpen = false"
+      @pipelineComplete="handleRescan"
+    />
+
+    <!-- OTHER MODALS (IMPORT / DELETE / ANNOTATE) -->
     <DatasetModalsContainer
       v-model:isModalOpen="isModalOpen"
       v-model:isAnnotateOpen="isAnnotateOpen"

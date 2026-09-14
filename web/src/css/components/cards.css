@@ -2,7 +2,7 @@
    3-COLOR CARDS & BUTTONS (ORANGE, WHITE, GRAY) (< 100 LINES)
    ========================================================================== */
 
-.view-container { max-width: 1400px; margin: 0 auto; width: 100%; }
+.view-container { width: 100%; max-width: 100%; margin: 0; box-sizing: border-box; }
 .view-header { margin-bottom: 1.5rem; }
 .view-title { font-family: var(--font-inter); font-size: 1.35rem; font-weight: 700; color: #ffffff; letter-spacing: -0.02em; }
 .view-subtitle { font-family: var(--font-mono); font-size: 0.775rem; color: var(--vms-text-muted); margin-top: 0.25rem; }

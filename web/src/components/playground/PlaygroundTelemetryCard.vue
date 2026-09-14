@@ -79,7 +79,10 @@ const handleExportPng = (e: MouseEvent, det: any) => {
             <span style="font-weight: 700; color: #fff;">{{ det.label }}</span>
             <span style="margin-left: 0.4rem; color: var(--cb-yellow); font-size: 0.7rem;">{{ (det.conf * 100).toFixed(0) }}%</span>
           </div>
-          <button class="cyber-pill" style="padding: 0.2rem 0.5rem; font-size: 0.65rem;" @click="(e) => handleExportPng(e, det)">[PNG]</button>
+          <div style="display: flex; gap: 0.25rem;">
+            <button class="cyber-pill" style="padding: 0.2rem 0.4rem; font-size: 0.65rem;" @click="(e) => handleExportPng(e, det)">[PNG]</button>
+            <a href="http://localhost:8082" target="_blank" rel="noreferrer" class="cyber-pill" style="padding: 0.2rem 0.4rem; font-size: 0.65rem; color: var(--cb-cyan); text-decoration: none;" @click.stop>[VAULT]</a>
+          </div>
         </div>
       </div>
     </div>
