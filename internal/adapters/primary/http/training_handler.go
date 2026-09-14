@@ -241,6 +241,18 @@ func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Req
 	dsDir := filepath.Join("/home/hades/datasets", dsID)
 	labelsDir := filepath.Join(dsDir, "train", "labels")
 	imagesDir := filepath.Join(dsDir, "train", "images")
+	if _, err := os.Stat(imagesDir); err != nil {
+		if _, err := os.Stat(filepath.Join(dsDir, "images")); err == nil {
+			imagesDir = filepath.Join(dsDir, "images")
+		} else {
+			imagesDir = dsDir
+		}
+	}
+	if _, err := os.Stat(labelsDir); err != nil {
+		if _, err := os.Stat(filepath.Join(dsDir, "labels")); err == nil {
+			labelsDir = filepath.Join(dsDir, "labels")
+		}
+	}
 
 	// Resolve class index from data.yaml if targetClass is name
 	targetClassIdx := targetClass
@@ -265,12 +277,6 @@ func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	entries, err := os.ReadDir(labelsDir)
-	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"cannot read labels dir: %s"}`, err.Error()), http.StatusNotFound)
-		return
-	}
-
 	type Match struct {
 		ImageURL string    `json:"image_url"`
 		Filename string    `json:"filename"`
@@ -279,6 +285,7 @@ func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Req
 	}
 
 	var allMatches []*Match
+	entries, _ := os.ReadDir(labelsDir)
 	for _, e := range entries {
 		if !strings.HasSuffix(e.Name(), ".txt") {
 			continue
@@ -295,7 +302,7 @@ func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Req
 				if targetClass == "" || cid == targetClass || cid == targetClassIdx {
 					baseName := strings.TrimSuffix(e.Name(), ".txt")
 					var imgFile string
-					for _, ext := range []string{".jpg", ".png", ".jpeg"} {
+					for _, ext := range []string{".jpg", ".png", ".jpeg", ".JPG", ".PNG"} {
 						if _, err := os.Stat(filepath.Join(imagesDir, baseName+ext)); err == nil {
 							imgFile = baseName + ext
 							break
@@ -306,8 +313,9 @@ func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Req
 						y, _ := strconv.ParseFloat(parts[2], 64)
 						w, _ := strconv.ParseFloat(parts[3], 64)
 						h, _ := strconv.ParseFloat(parts[4], 64)
+						relPath := strings.TrimPrefix(filepath.Join(imagesDir, imgFile), "/home/hades/datasets/")
 						allMatches = append(allMatches, &Match{
-							ImageURL: fmt.Sprintf("/api/v1/training/datasets/image?path=%s/train/images/%s", dsID, imgFile),
+							ImageURL: fmt.Sprintf("/api/v1/training/datasets/image?path=%s", relPath),
 							Filename: imgFile,
 							BBox:     []float64{x, y, w, h},
 							ClassID:  cid,
@@ -326,18 +334,21 @@ func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Req
 	}
 
 	if foundMatch == nil {
-		for _, ext := range []string{".jpg", ".png"} {
+		var rawImgs []string
+		for _, ext := range []string{".jpg", ".png", ".jpeg", ".JPG", ".PNG"} {
 			imgs, _ := filepath.Glob(filepath.Join(imagesDir, "*"+ext))
-			if len(imgs) > 0 {
-				r := rand.New(rand.NewSource(time.Now().UnixNano()))
-				imgBase := filepath.Base(imgs[r.Intn(len(imgs))])
-				foundMatch = &Match{
-					ImageURL: fmt.Sprintf("/api/v1/training/datasets/image?path=%s/train/images/%s", dsID, imgBase),
-					Filename: imgBase,
-					BBox:     []float64{0.5, 0.5, 0.4, 0.4},
-					ClassID:  targetClass,
-				}
-				break
+			rawImgs = append(rawImgs, imgs...)
+		}
+		if len(rawImgs) > 0 {
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			picked := rawImgs[r.Intn(len(rawImgs))]
+			imgBase := filepath.Base(picked)
+			relPath := strings.TrimPrefix(picked, "/home/hades/datasets/")
+			foundMatch = &Match{
+				ImageURL: fmt.Sprintf("/api/v1/training/datasets/image?path=%s", relPath),
+				Filename: imgBase,
+				BBox:     []float64{0.5, 0.5, 0.6, 0.6},
+				ClassID:  targetClass,
 			}
 		}
 	}

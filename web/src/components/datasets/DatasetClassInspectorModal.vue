@@ -18,7 +18,12 @@ const fetchClassSamples = async () => {
   try {
     const dsId = props.dataset.id || props.dataset.dataset_id
     const res = await fetch(`/api/v1/training/datasets/sample?id=${encodeURIComponent(dsId)}&class=${encodeURIComponent(selectedClass.value)}&t=${Date.now()}`)
-    sampleList.value = res.ok ? await res.json() : []
+    if (res.ok) {
+      const data = await res.json()
+      sampleList.value = Array.isArray(data) ? data : (data ? [data] : [])
+    } else {
+      sampleList.value = []
+    }
   } catch {
     sampleList.value = []
   } finally {

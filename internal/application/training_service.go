@@ -209,16 +209,19 @@ func (s *TrainingService) RescanDatasets(ctx context.Context) ([]*domain.Dataset
 // DeleteDataset removes a dataset from the repository and optionally removes its directory from disk.
 func (s *TrainingService) DeleteDataset(ctx context.Context, datasetID string, deleteFiles bool) error {
 	ds, err := s.datasetRepo.GetDataset(ctx, datasetID)
-	if err != nil {
-		return err
+	if err == nil {
+		_ = s.datasetRepo.DeleteDataset(ctx, datasetID)
 	}
-	if err := s.datasetRepo.DeleteDataset(ctx, datasetID); err != nil {
-		return err
-	}
-	if deleteFiles && ds.YAMLPath != "" {
-		dir := filepath.Dir(ds.YAMLPath)
-		if strings.HasPrefix(dir, "/home/hades/datasets/") || strings.HasPrefix(dir, "datasets/") {
-			_ = os.RemoveAll(dir)
+	if deleteFiles {
+		targetDir := filepath.Join("/home/hades/datasets", datasetID)
+		if strings.HasPrefix(targetDir, "/home/hades/datasets/") {
+			_ = os.RemoveAll(targetDir)
+		}
+		if ds != nil && ds.YAMLPath != "" {
+			dir := filepath.Dir(ds.YAMLPath)
+			if strings.HasPrefix(dir, "/home/hades/datasets/") || strings.HasPrefix(dir, "datasets/") {
+				_ = os.RemoveAll(dir)
+			}
 		}
 	}
 	return nil

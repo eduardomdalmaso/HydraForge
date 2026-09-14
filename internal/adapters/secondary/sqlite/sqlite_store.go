@@ -244,14 +244,11 @@ func (s *SQLiteStore) autoDiscoverDatasets(datasetsDir string) {
 		yamlPath := filepath.Join(fullPath, "data.yaml")
 		if _, err := os.Stat(yamlPath); err != nil {
 			imgCount := countImages(fullPath)
-			lblDir := filepath.Join(fullPath, "labels")
 			if imgCount > 0 {
-				if _, err := os.Stat(lblDir); err == nil {
-					clsName := strings.ReplaceAll(id, "_", " ")
-					clsName = strings.ReplaceAll(clsName, "-", " ")
-					content := fmt.Sprintf("path: %s\ntrain: .\nval: .\nnc: 1\nnames:\n  0: %s\n", fullPath, clsName)
-					_ = os.WriteFile(yamlPath, []byte(content), 0644)
-				}
+				clsName := strings.ReplaceAll(id, "_", " ")
+				clsName = strings.ReplaceAll(clsName, "-", " ")
+				content := fmt.Sprintf("path: %s\ntrain: .\nval: .\nnc: 1\nnames:\n  0: %s\n", fullPath, clsName)
+				_ = os.WriteFile(yamlPath, []byte(content), 0644)
 			}
 		}
 
@@ -280,6 +277,27 @@ func (s *SQLiteStore) autoDiscoverDatasets(datasetsDir string) {
 					classes_json=excluded.classes_json, num_classes=excluded.num_classes,
 					train_images=excluded.train_images, val_images=excluded.val_images, test_images=excluded.test_images`
 			_, _ = s.db.Exec(query, id, name, "detect", yamlPath, string(classesJSON), len(classes), trainCount, valCount, testCount, 0, time.Now())
+		}
+	}
+
+	// Purge stale SQLite records whose directories no longer exist on disk
+	rows, err := s.db.Query("SELECT dataset_id, yaml_path FROM registered_datasets")
+	if err == nil {
+		defer rows.Close()
+		var toDelete []string
+		for rows.Next() {
+			var dsID, yPath string
+			if err := rows.Scan(&dsID, &yPath); err == nil {
+				folderPath := filepath.Join(datasetsDir, dsID)
+				if _, err := os.Stat(folderPath); os.IsNotExist(err) {
+					toDelete = append(toDelete, dsID)
+				}
+			}
+		}
+		if err := rows.Err(); err == nil {
+			for _, staleID := range toDelete {
+				_, _ = s.db.Exec("DELETE FROM registered_datasets WHERE dataset_id = ?", staleID)
+			}
 		}
 	}
 }
@@ -737,6 +755,9 @@ func (s *SQLiteStore) loadBenchmarkResults(ctx context.Context, jobID string) []
 			r.ErrorMessage = errMsg.String
 			results = append(results, r)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil
 	}
 	return results
 }
