@@ -13,7 +13,7 @@ const emit = defineEmits<{ (e: 'jobLaunched', result: any): void }>()
 const family = ref('yolo26')
 const scale = ref('s')
 const task = ref('detect')
-const selectedDataset = ref(props.datasets?.[0]?.id || '')
+const selectedDataset = ref(props.datasets?.[0]?.dataset_id || props.datasets?.[0]?.id || '')
 const isLaunching = ref(false)
 const errorMsg = ref('')
 const params = ref({
@@ -23,7 +23,9 @@ const params = ref({
 })
 
 watch(() => props.datasets, (newDs) => {
-  if (newDs && newDs.length > 0 && !selectedDataset.value) selectedDataset.value = newDs[0].id
+  if (newDs && newDs.length > 0 && !selectedDataset.value) {
+    selectedDataset.value = newDs[0].dataset_id || newDs[0].id || ''
+  }
 }, { immediate: true })
 
 const handleLaunch = async () => {
@@ -50,9 +52,14 @@ const handleLaunch = async () => {
 
 <template>
   <div class="view-container cockpit-container">
-    <div class="cockpit-full-header">
-      <h1 class="cockpit-main-title">ESTUDIO DE TREINAMENTO YOLO</h1>
-      <p class="cockpit-main-subtitle">CONFIGURE ARQUITETURA, HIPERPARAMETROS E EXECUTE TREINOS NA GPU NVIDIA RTX 5090</p>
+    <div class="cockpit-full-header" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+      <div>
+        <h1 class="cockpit-main-title">ESTUDIO DE TREINAMENTO YOLO</h1>
+        <p class="cockpit-main-subtitle">CONFIGURE ARQUITETURA, HIPERPARAMETROS E EXECUTE TREINOS NA GPU NVIDIA RTX 5090</p>
+      </div>
+      <button class="cyber-action-btn" :disabled="isLaunching" style="padding: 0.55rem 1.25rem; font-size: 0.82rem; font-weight: 700;" @click="handleLaunch">
+        <span>{{ isLaunching ? 'INICIANDO TREINO...' : 'INICIAR TREINAMENTO ➔' }}</span>
+      </button>
     </div>
 
     <div v-if="errorMsg" class="cyber-alerts-banner" style="margin-bottom: 1rem;">
@@ -65,12 +72,6 @@ const handleLaunch = async () => {
       <HyperparameterCard :params="params as any" @update:params="(p) => params = p as any" />
       <TwoStageControlCard :params="params" @update:params="(p) => params = p as any" />
       <HardwareEstimatorCard :datasets="datasets" v-model:selectedDataset="selectedDataset" :scale="scale" :batchSize="params.batch" :imgsz="params.imgsz" />
-    </div>
-
-    <div class="cockpit-bottom-bar">
-      <button class="cockpit-launch-action-btn" :disabled="isLaunching" @click="handleLaunch">
-        {{ isLaunching ? 'INICIANDO TREINO...' : 'INICIAR TREINAMENTO' }}
-      </button>
     </div>
   </div>
 </template>

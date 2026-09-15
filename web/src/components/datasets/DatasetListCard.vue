@@ -19,7 +19,10 @@ const emit = defineEmits<{
   (e: 'deleteDataset', ds: DatasetInfo): void
 }>()
 
-const isMerged = (ds: DatasetInfo) => ds.id.includes('merged') || ds.id.includes('frota') || ds.id.includes('fusion')
+const isMerged = (ds: DatasetInfo) => {
+  const str = ds.id || ds.dataset_id || ''
+  return str.includes('merged') || str.includes('frota') || str.includes('fusion')
+}
 </script>
 
 <template>
@@ -35,7 +38,7 @@ const isMerged = (ds: DatasetInfo) => ds.id.includes('merged') || ds.id.includes
     </div>
 
     <div class="ds-list-scroll">
-      <div v-if="datasets.length === 0" style="font-size: 0.8rem; color: #94a3b8; textAlign: center; padding: 1.2rem 0;">
+      <div v-if="datasets.length === 0" style="font-size: 0.8rem; color: #94a3b8; text-align: center; padding: 1.2rem 0;">
         No registered datasets found. Click <strong>IMPORT</strong> or <strong>RESCAN</strong>.
       </div>
       <div

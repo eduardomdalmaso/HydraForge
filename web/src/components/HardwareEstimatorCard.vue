@@ -47,10 +47,10 @@ const estimatedVRAM = computed(() => {
         </option>
         <option
           v-for="d in datasets"
-          :key="d.id"
-          :value="d.id"
+          :key="d.dataset_id || d.id"
+          :value="d.dataset_id || d.id"
         >
-          {{ d.name }} ({{ d.classes?.length || 0 }} classes // {{ d.train_count || 0 }} train / {{ d.val_count || 0 }} val)
+          {{ d.name }} ({{ d.classes?.length || d.num_classes || 0 }} classes // {{ (d.train_images ?? d.train_count ?? 0).toLocaleString() }} train / {{ (d.val_images ?? d.val_count ?? 0).toLocaleString() }} val)
         </option>
       </select>
     </div>
