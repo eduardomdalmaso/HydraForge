@@ -127,8 +127,8 @@ func TestZipSlipBlockedOnImport(t *testing.T) {
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
-	if _, err := os.Stat("/home/hades/evil.txt"); err == nil {
-		os.Remove("/home/hades/evil.txt")
+	if _, err := os.Stat("../../evil.txt"); err == nil {
+		os.Remove("../../evil.txt")
 		t.Fatalf("SECURITY VIOLATION: Zip Slip file was written to host filesystem!")
 	}
 }

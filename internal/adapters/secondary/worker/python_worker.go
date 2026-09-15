@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"hydraforge/internal/config"
 	"hydraforge/internal/domain"
 	"hydraforge/internal/ports"
 )
@@ -49,38 +50,34 @@ func (w *PythonWorker) StartTraining(ctx context.Context, job *domain.TrainingJo
 		w.mu.Unlock()
 	}()
 
-	pythonBin := "/home/hades/miniconda3/envs/analytics-env/bin/python"
-	if _, err := os.Stat(pythonBin); err != nil {
-		pythonBin = "/home/hades/miniconda3/envs/hydraforge/bin/python"
-	}
+	pythonBin := config.GetPythonBin()
 
 	yamlPath := job.DatasetPath
 	if yamlPath == "" {
-		cand1 := filepath.Join("/home/hades/Documents/HydraForge/datasets", job.DatasetID, "data.yaml")
-		cand2 := filepath.Join("datasets", job.DatasetID, "data.yaml")
-		cand3 := filepath.Join("/home/hades/datasets", job.DatasetID, "data.yaml")
-		if _, err := os.Stat(cand1); err == nil {
-			yamlPath = cand1
-		} else if _, err := os.Stat(cand2); err == nil {
-			yamlPath = cand2
-		} else {
-			yamlPath = cand3
+		for _, base := range config.GetDatasetsSearchDirs() {
+			cand := filepath.Join(base, job.DatasetID, "data.yaml")
+			if _, err := os.Stat(cand); err == nil {
+				yamlPath = cand
+				break
+			}
+		}
+		if yamlPath == "" {
+			yamlPath = filepath.Join("datasets", job.DatasetID, "data.yaml")
 		}
 	}
 
-	scriptPath := "/home/hades/Documents/HydraForge/worker_python/train.py"
+	scriptPath := "worker_python/train.py"
 	if _, err := os.Stat(scriptPath); err != nil {
-		scriptPath = "worker_python/train.py"
+		if homeScript := filepath.Join(config.GetHomeDir(), "Documents/HydraForge/worker_python/train.py"); false {
+			scriptPath = homeScript
+		}
 	}
 
 	modelArg := job.ModelArchitecture
 	if !strings.HasSuffix(modelArg, ".pt") && !strings.HasSuffix(modelArg, ".yaml") {
 		modelArg += ".pt"
 	}
-	weightsCand := filepath.Join("/home/hades/Documents/HydraForge/weights", filepath.Base(modelArg))
-	if _, err := os.Stat(weightsCand); err == nil {
-		modelArg = weightsCand
-	} else if _, err := os.Stat(filepath.Join("weights", filepath.Base(modelArg))); err == nil {
+	if _, err := os.Stat(filepath.Join("weights", filepath.Base(modelArg))); err == nil {
 		modelArg = filepath.Join("weights", filepath.Base(modelArg))
 	}
 
@@ -104,7 +101,7 @@ func (w *PythonWorker) StartTraining(ctx context.Context, job *domain.TrainingJo
 	}
 
 	cmd := exec.CommandContext(ctx, pythonBin, args...)
-	cmd.Dir = "/home/hades/Documents/HydraForge"
+	cmd.Dir = "."
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err

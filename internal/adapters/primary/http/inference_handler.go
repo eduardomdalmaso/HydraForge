@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"hydraforge/internal/config"
 )
 
 // InferenceRequest represents payload for YOLO model inference.
@@ -41,7 +43,7 @@ func HandleInferencePredict(w http.ResponseWriter, r *http.Request) {
 
 	req := InferenceRequest{
 		Model:  "yolo26n",
-		Source: "/home/hades/datasets/frota_urbana_4classes/train/images/rf100_adit_mp4-100_jpg.rf.1ceee906e811b590f48e8e4decda7380.jpg",
+		Source: "cam_entrance_01",
 		Conf:   0.25,
 		IoU:    0.45,
 		Device: "0",
@@ -95,11 +97,7 @@ func HandleInferencePredict(w http.ResponseWriter, r *http.Request) {
 
 	// Resolve model weight path
 	modelFile := resolveModelWeights(req.Model)
-
-	pythonBin := "/home/hades/miniconda3/envs/analytics-env/bin/python"
-	if _, err := os.Stat(pythonBin); err != nil {
-		pythonBin = "python3"
-	}
+	pythonBin := config.GetPythonBin()
 
 	scriptPath := "worker_python/predict.py"
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
@@ -111,6 +109,7 @@ func HandleInferencePredict(w http.ResponseWriter, r *http.Request) {
 		"--conf", fmt.Sprintf("%.2f", req.Conf),
 		"--iou", fmt.Sprintf("%.2f", req.IoU),
 		"--device", req.Device,
+		"--track",
 	)
 
 	var stdout, stderr bytes.Buffer
@@ -137,11 +136,12 @@ func resolveModelWeights(model string) string {
 	cleanID := strings.TrimSuffix(model, ".pt")
 	candidates := []string{
 		filepath.Join("runs/train", cleanID, "weights/best.pt"),
-		filepath.Join("/home/hades/Documents/HydraForge/runs/train", cleanID, "weights/best.pt"),
-		filepath.Join("/home/hades/runs/train", cleanID, "weights/best.pt"),
 		filepath.Join("weights", model),
 		filepath.Join("weights", cleanID+".pt"),
 		filepath.Join("weights", cleanID+".engine"),
+	}
+	for _, base := range config.GetRunsSearchDirs() {
+		candidates = append(candidates, filepath.Join(base, cleanID, "weights/best.pt"))
 	}
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
@@ -179,16 +179,13 @@ func HandleInferenceLiveStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	modelFile := resolveModelWeights(model)
-	pythonBin := "/home/hades/miniconda3/envs/analytics-env/bin/python"
-	if _, err := os.Stat(pythonBin); err != nil {
-		pythonBin = "python3"
-	}
+	pythonBin := config.GetPythonBin()
 
 	sourcePath := source
 	if source == "webcam" {
 		sourcePath = "/dev/shm/hydra_webcam_frame.jpg"
 	} else if !filepath.IsAbs(source) {
-		shmSample := filepath.Join("/home/hades/Documents/HydraStream/samples", fmt.Sprintf("%s.jpg", source))
+		shmSample := filepath.Join(config.GetHydraStreamSamplesDir(), fmt.Sprintf("%s.jpg", source))
 		if _, err := os.Stat(shmSample); err == nil {
 			sourcePath = shmSample
 		}

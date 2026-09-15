@@ -167,11 +167,16 @@ func (h *MediaHandler) HandleStream(w http.ResponseWriter, r *http.Request) {
 	ext := strings.ToLower(filepath.Ext(filename))
 	contentType := mime.TypeByExtension(ext)
 	if contentType == "" {
-		if ext == ".mp4" {
+		switch ext {
+		case ".mp4":
 			contentType = "video/mp4"
-		} else if ext == ".webm" {
+		case ".webm":
 			contentType = "video/webm"
-		} else {
+		case ".avi":
+			contentType = "video/x-msvideo"
+		case ".mkv":
+			contentType = "video/x-matroska"
+		default:
 			contentType = "application/octet-stream"
 		}
 	}

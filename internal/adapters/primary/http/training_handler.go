@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"hydraforge/internal/config"
 	"hydraforge/internal/domain"
 	"hydraforge/internal/ports"
 )
@@ -134,16 +135,17 @@ func (h *TrainingHandler) HandleDatasetAudit(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	dsDir := filepath.Join("/home/hades/Documents/HydraForge/datasets", id)
-	if _, err := os.Stat(dsDir); err != nil {
-		dsDir = filepath.Join("datasets", id)
-		if _, err := os.Stat(dsDir); err != nil {
-			dsDir = filepath.Join("/home/hades/datasets", id)
-			if _, err := os.Stat(dsDir); err != nil {
-				http.Error(w, `{"error":"dataset directory not found on disk"}`, http.StatusNotFound)
-				return
-			}
+	var dsDir string
+	for _, base := range config.GetDatasetsSearchDirs() {
+		cand := filepath.Join(base, id)
+		if fi, err := os.Stat(cand); err == nil && fi.IsDir() {
+			dsDir = cand
+			break
 		}
+	}
+	if dsDir == "" {
+		http.Error(w, `{"error":"dataset directory not found on disk"}`, http.StatusNotFound)
+		return
 	}
 
 	// Real scan of labels
@@ -203,7 +205,7 @@ func (h *TrainingHandler) HandleDatasetAudit(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(res)
 }
 
-// HandleDatasetImage serves raw images from /home/hades/datasets safely.
+// HandleDatasetImage serves raw images from datasets directory safely.
 func (h *TrainingHandler) HandleDatasetImage(w http.ResponseWriter, r *http.Request) {
 	relPath := r.URL.Query().Get("path")
 	if relPath == "" {
@@ -211,12 +213,17 @@ func (h *TrainingHandler) HandleDatasetImage(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	clean := filepath.Clean(relPath)
-	fullPath := filepath.Join("/home/hades/datasets", clean)
-	if !strings.HasPrefix(fullPath, "/home/hades/datasets") {
-		http.Error(w, "forbidden path", http.StatusForbidden)
-		return
+	var fullPath string
+	for _, base := range config.GetDatasetsSearchDirs() {
+		cand := filepath.Clean(filepath.Join(base, clean))
+		if strings.HasPrefix(cand, base) {
+			if _, err := os.Stat(cand); err == nil {
+				fullPath = cand
+				break
+			}
+		}
 	}
-	if _, err := os.Stat(fullPath); err != nil {
+	if fullPath == "" {
 		http.Error(w, "file not found", http.StatusNotFound)
 		return
 	}
@@ -238,7 +245,17 @@ func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	dsDir := filepath.Join("/home/hades/datasets", dsID)
+	var dsDir string
+	for _, base := range config.GetDatasetsSearchDirs() {
+		cand := filepath.Join(base, dsID)
+		if fi, err := os.Stat(cand); err == nil && fi.IsDir() {
+			dsDir = cand
+			break
+		}
+	}
+	if dsDir == "" {
+		dsDir = filepath.Join("datasets", dsID)
+	}
 	labelsDir := filepath.Join(dsDir, "train", "labels")
 	imagesDir := filepath.Join(dsDir, "train", "images")
 	if _, err := os.Stat(imagesDir); err != nil {
@@ -338,7 +355,7 @@ func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Req
 				}
 			}
 			if imgFile != "" {
-				relPath := strings.TrimPrefix(filepath.Join(imagesDir, imgFile), "/home/hades/datasets/")
+				relPath := filepath.Join(dsID, "train", "images", imgFile)
 				allMatches = append(allMatches, &Match{
 					ImageURL:    fmt.Sprintf("/api/v1/training/datasets/image?path=%s", relPath),
 					Filename:    imgFile,
@@ -366,7 +383,7 @@ func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Req
 			r := rand.New(rand.NewSource(time.Now().UnixNano()))
 			picked := rawImgs[r.Intn(len(rawImgs))]
 			imgBase := filepath.Base(picked)
-			relPath := strings.TrimPrefix(picked, "/home/hades/datasets/")
+			relPath := filepath.Join(dsID, "train", "images", imgBase)
 			defaultBox := []float64{0.5, 0.5, 0.6, 0.6}
 			foundMatch = &Match{
 				ImageURL: fmt.Sprintf("/api/v1/training/datasets/image?path=%s", relPath),
@@ -462,7 +479,7 @@ func (h *TrainingHandler) HandleDatasetImport(w http.ResponseWriter, r *http.Req
 	}
 
 	registered := make([]*domain.Dataset, 0, len(files))
-	datasetsDir := "/home/hades/datasets"
+	datasetsDir := config.GetDatasetsDir()
 	_ = os.MkdirAll(datasetsDir, 0755)
 
 	for _, fileHeader := range files {
@@ -585,7 +602,7 @@ func (h *TrainingHandler) HandleDatasetRegisterPath(w http.ResponseWriter, r *ht
 	}
 	id = strings.ToLower(strings.ReplaceAll(id, " ", "_"))
 
-	targetLink := filepath.Join("/home/hades/datasets", id)
+	targetLink := filepath.Join(config.GetDatasetsDir(), id)
 	if _, err := os.Stat(targetLink); err != nil && targetLink != cleanReqPath {
 		_ = os.Symlink(cleanReqPath, targetLink)
 	}
@@ -639,7 +656,7 @@ func (h *TrainingHandler) HandleDatasetMerge(w http.ResponseWriter, r *http.Requ
 	if cleanTarget == "" {
 		cleanTarget = fmt.Sprintf("merged_%d", time.Now().Unix())
 	}
-	outDir := filepath.Join("/home/hades/datasets", cleanTarget)
+	outDir := filepath.Join(config.GetDatasetsDir(), cleanTarget)
 	_ = os.RemoveAll(outDir)
 	_ = os.MkdirAll(filepath.Join(outDir, "train", "images"), 0755)
 	_ = os.MkdirAll(filepath.Join(outDir, "train", "labels"), 0755)
@@ -659,7 +676,17 @@ func (h *TrainingHandler) HandleDatasetMerge(w http.ResponseWriter, r *http.Requ
 	valCount := 0
 
 	for _, dsID := range req.DatasetIDs {
-		srcDir := filepath.Join("/home/hades/datasets", dsID)
+		var srcDir string
+		for _, base := range config.GetDatasetsSearchDirs() {
+			cand := filepath.Join(base, dsID)
+			if fi, err := os.Stat(cand); err == nil && fi.IsDir() {
+				srcDir = cand
+				break
+			}
+		}
+		if srcDir == "" {
+			srcDir = filepath.Join(config.GetDatasetsDir(), dsID)
+		}
 		prefix := dsID + "_"
 		dsMap := req.Mappings[dsID]
 		srcDataset, _ := h.useCase.GetDataset(r.Context(), dsID)
@@ -783,7 +810,7 @@ func (h *TrainingHandler) HandleDatasetMerge(w http.ResponseWriter, r *http.Requ
 	for i, c := range req.Classes {
 		namesYaml.WriteString(fmt.Sprintf("  %d: %s\n", i, c))
 	}
-	yamlContent := fmt.Sprintf("# Ultralytics YOLO Unified Dataset\npath: /home/hades/datasets/%s\ntrain: train/images\nval: valid/images\ntest: valid/images\n\nnc: %d\nnames:\n%s", cleanTarget, len(req.Classes), namesYaml.String())
+	yamlContent := fmt.Sprintf("# Ultralytics YOLO Unified Dataset\npath: %s\ntrain: train/images\nval: valid/images\ntest: valid/images\n\nnc: %d\nnames:\n%s", outDir, len(req.Classes), namesYaml.String())
 	_ = os.WriteFile(yamlPath, []byte(yamlContent), 0644)
 
 	ds := &domain.Dataset{
@@ -879,7 +906,7 @@ func (h *TrainingHandler) HandleModels(w http.ResponseWriter, r *http.Request) {
 			}
 			weightsPath := j.OutputWeights
 			if weightsPath == "" {
-				weightsPath = fmt.Sprintf("/home/hades/Documents/HydraForge/runs/train/%s/weights/best.pt", j.JobID)
+				weightsPath = fmt.Sprintf("runs/train/%s/weights/best.pt", j.JobID)
 			}
 			customItem := ModelZooItem{
 				ID:          j.JobID,

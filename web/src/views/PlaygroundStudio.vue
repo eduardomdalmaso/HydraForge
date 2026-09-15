@@ -13,7 +13,7 @@ import { runRealInferenceAPI } from '../api/inference_client'
 
 const config = ref({
   model: 'yolo26n',
-  source: 'cam_entrance_01',
+  source: 'folder:carros',
   runtime: 'pytorch',
   conf: 0.25,
   iou: 0.45,
@@ -36,11 +36,16 @@ const showMediaModal = ref(false)
 const loadMediaFolders = async () => {
   const data = await fetchMediaSources()
   mediaFolders.value = data.folders || []
+  if (config.value.source === 'folder:carros' && !mediaFolders.value.some(f => f.name === 'carros')) {
+    const firstWithFiles = mediaFolders.value.find(f => f.file_count > 0)
+    if (firstWithFiles) config.value.source = `folder:${firstWithFiles.name}`
+  }
 }
 
 onMounted(loadMediaFolders)
 
 const isWebcam = computed(() => config.value.source === 'webcam')
+const isVideoMedia = computed(() => config.value.source?.startsWith('folder:') || config.value.source?.startsWith('video:'))
 const activeStream = computed(() => hydraStreams.value.find(s => s.stream_id === config.value.source) || (hydraStreams.value[0] || null))
 
 const { videoRef, captureFrame } = useWebcamStream(isWebcam)
@@ -50,7 +55,7 @@ const { history, pushDetections, clearHistory } = useDetectionHistory()
 
 watch(detections, (newDets) => {
   if (newDets && newDets.length > 0) {
-    const el = (isWebcam.value || config.value.source?.startsWith('video:'))
+    const el = (isWebcam.value || isVideoMedia.value)
       ? document.getElementById('hud-viewport-video')
       : document.getElementById('hud-viewport-image') as any
     pushDetections(newDets, el, config.value.source)
@@ -61,12 +66,12 @@ const handleInference = async () => {
   const b64 = captureFrame()
   const res = await runRealInferenceAPI(config.value, b64)
   if (res) {
-    if (res.displayImageUrl && !isWebcam.value && !config.value.source?.startsWith('video:') && !isContinuous.value) {
+    if (res.displayImageUrl && !isWebcam.value && !isVideoMedia.value && !isContinuous.value) {
       imageSrc.value = res.displayImageUrl
     }
     if (Array.isArray(res.detections)) {
       detections.value = res.detections
-      const el = (isWebcam.value || config.value.source?.startsWith('video:'))
+      const el = (isWebcam.value || isVideoMedia.value)
         ? document.getElementById('hud-viewport-video')
         : document.getElementById('hud-viewport-image') as any
       pushDetections(res.detections, el, config.value.source)
@@ -80,7 +85,7 @@ const handleInference = async () => {
   <div class="view-container playground-container">
     <div class="cockpit-full-header">
       <h1 class="cockpit-main-title">PLAYGROUND DE INFERENCIA & TRACKING</h1>
-      <p class="cockpit-main-subtitle">HARDWARE NATIVO RTX 5090 // VIDEOS EM LOOP .MP4 // INFERENCIA AO VIVO</p>
+      <p class="cockpit-main-subtitle">HARDWARE NATIVO RTX 5090 // PASTAS DE VIDEOS EM LOOP // INFERENCIA AO VIVO</p>
     </div>
 
     <!-- TOP ROW: LEFT VIEWPORT (720P 16:9) + RIGHT CONTROLS PANEL -->
@@ -92,13 +97,14 @@ const handleInference = async () => {
           :selectedEntity="selectedEntity"
           :isScanning="isScanning"
           :isContinuous="isContinuous"
-          :isHydraLinked="!isWebcam && !config.source?.startsWith('video:') && hydraStreams.length > 0"
+          :isHydraLinked="!isWebcam && !isVideoMedia && hydraStreams.length > 0"
           :activeStream="activeStream"
           :isWebcam="isWebcam"
           :videoRef="videoRef"
           :telemetry="telemetry"
           :gpuStats="gpuStats"
           :config="config"
+          :mediaFolders="mediaFolders"
           @update:selectedEntity="(e) => selectedEntity = e"
         />
       </div>

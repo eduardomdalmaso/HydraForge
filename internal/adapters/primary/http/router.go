@@ -79,7 +79,7 @@ func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler
 	}
 
 	// 6. HydraStream Integration Proxy (Port 8080)
-	authEndpoint("/api/v1/hydrastream/", HydraStreamProxy("http://localhost:8080"))
+	mux.HandleFunc("/api/v1/hydrastream/", HydraStreamProxy("http://localhost:8080"))
 
 	// 7. Real-Time Optical YOLO Inference (NVIDIA RTX 5090)
 	authEndpoint("/api/v1/inference/predict", HandleInferencePredict)

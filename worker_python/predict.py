@@ -16,13 +16,21 @@ def resolve_weights(weights_arg):
 
     clean_id = os.path.basename(weights_arg).replace(".pt", "").replace(".engine", "")
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    home_dir = os.path.expanduser("~")
+    runs_env = os.environ.get("RUNS_DIR", "")
+
     candidates = [
         os.path.join(base_dir, "runs/train", clean_id, "weights", "best.pt"),
-        os.path.join("/home/hades/Documents/HydraForge/runs/train", clean_id, "weights", "best.pt"),
-        os.path.join("/home/hades/runs/train", clean_id, "weights", "best.pt"),
         os.path.join(base_dir, "weights", f"{clean_id}.pt"),
         os.path.join(base_dir, "weights", f"{clean_id}.engine"),
     ]
+    if runs_env:
+        candidates.insert(0, os.path.join(runs_env, clean_id, "weights", "best.pt"))
+    candidates.extend([
+        os.path.join(home_dir, "runs/train", clean_id, "weights", "best.pt"),
+        os.path.join(home_dir, "Documents/HydraForge/runs/train", clean_id, "weights", "best.pt"),
+    ])
+
     for c in candidates:
         if os.path.exists(c):
             return c
@@ -32,21 +40,52 @@ def resolve_source(source_arg):
     if os.path.exists(source_arg):
         return source_arg
 
-    # Check if stream ID from HydraStream
-    shm_sample = f"/home/hades/Documents/HydraStream/samples/{source_arg}.jpg"
-    if os.path.exists(shm_sample):
-        return shm_sample
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    home_dir = os.path.expanduser("~")
+    samples_env = os.environ.get("HYDRASTREAM_SAMPLES_DIR", "")
+    datasets_env = os.environ.get("DATASETS_DIR", "")
+
+    # Check HydraStream sample files
+    sample_candidates = []
+    if samples_env:
+        sample_candidates.extend([
+            os.path.join(samples_env, f"{source_arg}.jpg"),
+            os.path.join(samples_env, source_arg),
+            os.path.join(samples_env, "cam_01.jpg"),
+        ])
+    sample_candidates.extend([
+        os.path.join(base_dir, "../HydraStream/samples", f"{source_arg}.jpg"),
+        os.path.join(base_dir, "../HydraStream/samples", source_arg),
+        os.path.join(home_dir, "Documents/HydraStream/samples", f"{source_arg}.jpg"),
+        os.path.join(home_dir, "Documents/HydraStream/samples", source_arg),
+        os.path.join(home_dir, "Documents/HydraStream/samples/cam_01.jpg"),
+        os.path.join(home_dir, "Documents/HydraStream/samples/cam_10_0_0_64.jpg"),
+    ])
+    for sc in sample_candidates:
+        if os.path.exists(sc):
+            return sc
 
     clean_id = source_arg.replace("dataset:", "")
-    ds_pattern = f"/home/hades/datasets/{clean_id}/train/images/*.jpg"
-    matched = glob.glob(ds_pattern)
-    if matched:
-        return matched[0]
+    dataset_dirs = [
+        os.path.join(base_dir, "datasets"),
+        os.path.join(home_dir, "datasets"),
+        os.path.join(home_dir, "Documents/HydraForge/datasets"),
+    ]
+    if datasets_env:
+        dataset_dirs.insert(0, datasets_env)
 
-    # Global fallback to urban fleet sample
-    fallback = "/home/hades/datasets/frota_urbana_4classes/train/images/rf100_adit_mp4-100_jpg.rf.1ceee906e811b590f48e8e4decda7380.jpg"
-    if os.path.exists(fallback):
-        return fallback
+    for ds_dir in dataset_dirs:
+        ds_pattern = os.path.join(ds_dir, clean_id, "train/images/*.jpg")
+        matched = glob.glob(ds_pattern)
+        if matched:
+            return matched[0]
+
+    # Global dataset fallbacks
+    for ds_dir in dataset_dirs:
+        fallbacks = glob.glob(os.path.join(ds_dir, "*/train/images/*.jpg"))
+        if fallbacks:
+            return fallbacks[0]
+
     return source_arg
 
 def parse_args():
@@ -57,12 +96,17 @@ def parse_args():
     parser.add_argument("--iou", type=float, default=0.45, help="IoU NMS threshold")
     parser.add_argument("--device", type=str, default="0", help="CUDA device index or cpu")
     parser.add_argument("--imgsz", type=int, default=640, help="Inference image resolution")
+    parser.add_argument("--track", action="store_true", help="Enable ByteTrack object tracking")
     return parser.parse_args()
 
 def main():
     args = parse_args()
     weights_path = resolve_weights(args.weights)
     source_path = resolve_source(args.source)
+
+    if not os.path.exists(source_path):
+        print(json.dumps({"status": "error", "error": f"source {source_path} not found", "detections": []}))
+        sys.exit(1)
 
     from ultralytics import YOLO
     import torch
@@ -72,14 +116,26 @@ def main():
         device = 0 if (torch.cuda.is_available() and args.device != "cpu") else "cpu"
 
         t_start = time.perf_counter()
-        results = model.predict(
-            source=source_path,
-            conf=args.conf,
-            iou=args.iou,
-            device=device,
-            imgsz=args.imgsz,
-            verbose=False
-        )
+        if args.track:
+            results = model.track(
+                source=source_path,
+                conf=args.conf,
+                iou=args.iou,
+                device=device,
+                imgsz=args.imgsz,
+                persist=True,
+                tracker="bytetrack.yaml",
+                verbose=False
+            )
+        else:
+            results = model.predict(
+                source=source_path,
+                conf=args.conf,
+                iou=args.iou,
+                device=device,
+                imgsz=args.imgsz,
+                verbose=False
+            )
         t_total_ms = (time.perf_counter() - t_start) * 1000.0
 
         detections = []
@@ -97,6 +153,10 @@ def main():
                 conf = float(box.conf[0].item())
                 xywhn = box.xywhn[0].tolist()
 
+                track_id = None
+                if box.id is not None:
+                    track_id = int(box.id[0].item())
+
                 left_pct = max(0.0, min(100.0, (xywhn[0] - xywhn[2] / 2.0) * 100.0))
                 top_pct = max(0.0, min(100.0, (xywhn[1] - xywhn[3] / 2.0) * 100.0))
                 w_pct = max(1.0, min(100.0, xywhn[2] * 100.0))
@@ -110,10 +170,14 @@ def main():
                 elif "phone" in cls_name.lower():
                     color = "#ff0055"
 
+                det_id = track_id if track_id is not None else (idx + 1)
                 detections.append({
-                    "id": idx + 1,
+                    "id": det_id,
+                    "track_id": track_id,
                     "label": cls_name,
+                    "class_name": cls_name,
                     "conf": round(conf, 3),
+                    "confidence": round(conf, 3),
                     "box": [round(left_pct, 2), round(top_pct, 2), round(w_pct, 2), round(h_pct, 2)],
                     "color": color
                 })

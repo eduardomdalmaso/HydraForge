@@ -68,6 +68,15 @@ const updateField = (field: string, val: any) => emit('update:config', { ...prop
           </button>
         </div>
         <select class="cyber-select" :value="config.source" @change="(e) => updateField('source', (e.target as HTMLSelectElement).value)">
+          <optgroup label="[PASTAS DE VIDEOS // PLAYLIST LOOP]">
+            <option
+              v-for="folder in mediaFolders.filter(f => (f.files && f.files.length > 0) || f.file_count > 0)"
+              :key="folder.name"
+              :value="`folder:${folder.name}`"
+            >
+              [PASTA] {{ folder.label }} // {{ folder.file_count }} VÍDEOS ({{ (folder.total_bytes / 1024 / 1024).toFixed(1) }} MB)
+            </option>
+          </optgroup>
           <optgroup label="[LOCAL HARDWARE DEVICES]">
             <option value="webcam">[WEBCAM] LOCAL WEBCAM // /dev/video0</option>
           </optgroup>
@@ -77,13 +86,6 @@ const updateField = (field: string, val: any) => emit('update:config', { ...prop
             </template>
             <option v-else value="cam_entrance_01">[STREAM] CAM_ENTRANCE_01 // 1080P @ 30 FPS</option>
           </optgroup>
-          <template v-for="folder in mediaFolders" :key="folder.name">
-            <optgroup v-if="folder.files && folder.files.length > 0" :label="`[VIDEO LOOP // ${folder.label}]`">
-              <option v-for="f in folder.files" :key="f.id" :value="`video:${f.folder}/${f.name}`">
-                [LOOP] {{ f.name.toUpperCase() }} // {{ (f.size_bytes / 1024 / 1024).toFixed(1) }} MB
-              </option>
-            </optgroup>
-          </template>
         </select>
       </div>
 

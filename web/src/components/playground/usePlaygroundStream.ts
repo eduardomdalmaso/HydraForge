@@ -10,19 +10,51 @@ export function usePlaygroundStream(
   imageSrc: Ref<string>
 ) {
   let eventSource: EventSource | null = null
-  let frameInterval: any = null
+  let isLoopActive = false
+  let currentRunId = 0
+
+  const runVideoFrameLoop = async (runId: number) => {
+    if (!isLoopActive || runId !== currentRunId) return
+
+    const b64 = captureFrame()
+    if (b64) {
+      try {
+        const res = await fetch('/api/v1/inference/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: config.value.model || 'yolo26n',
+            image_base64: b64,
+            conf: config.value.conf || 0.25,
+            iou: config.value.iou || 0.45,
+            device: '0'
+          })
+        })
+        if (res.ok && isLoopActive && runId === currentRunId) {
+          const d = await res.json()
+          if (Array.isArray(d.detections)) detections.value = d.detections
+          if (d.telemetry) telemetry.value = d.telemetry
+        }
+      } catch {}
+    }
+
+    if (isLoopActive && runId === currentRunId) {
+      setTimeout(() => {
+        requestAnimationFrame(() => runVideoFrameLoop(runId))
+      }, 30)
+    }
+  }
 
   const startLiveStream = () => {
+    isLoopActive = false
+    currentRunId++
+
     if (eventSource) {
       eventSource.close()
       eventSource = null
     }
-    if (frameInterval) {
-      clearInterval(frameInterval)
-      frameInterval = null
-    }
 
-    const isVideoLoop = config.value.source?.startsWith('video:')
+    const isVideoLoop = config.value.source?.startsWith('video:') || config.value.source?.startsWith('folder:')
     const isFrameUploader = isWebcam.value || isVideoLoop
 
     if (!isContinuous.value) {
@@ -32,39 +64,30 @@ export function usePlaygroundStream(
       return
     }
 
-    if (!isFrameUploader) {
-      imageSrc.value = `/api/v1/hydrastream/api/v1/streams/${config.value.source}/mjpeg?t=${Date.now()}`
+    if (isFrameUploader) {
+      isLoopActive = true
+      runVideoFrameLoop(currentRunId)
     } else {
-      frameInterval = setInterval(() => {
-        const b64 = captureFrame()
-        if (b64) {
-          fetch('/api/v1/inference/frame', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image_base64: b64 })
-          }).catch(() => {})
-        }
-      }, 50)
-    }
-
-    const liveSrc = isFrameUploader ? 'webcam' : config.value.source
-    eventSource = new EventSource(`/api/v1/inference/live?model=${encodeURIComponent(config.value.model)}&source=${encodeURIComponent(liveSrc)}&conf=${config.value.conf}`)
-    eventSource.onmessage = (e) => {
-      try {
-        const d = JSON.parse(e.data)
-        if (Array.isArray(d.detections)) detections.value = d.detections
-        if (d.telemetry) telemetry.value = d.telemetry
-      } catch {}
+      imageSrc.value = `/api/v1/hydrastream/api/v1/streams/${config.value.source}/mjpeg?t=${Date.now()}`
+      eventSource = new EventSource(`/api/v1/inference/live?model=${encodeURIComponent(config.value.model)}&source=${encodeURIComponent(config.value.source)}&conf=${config.value.conf}`)
+      eventSource.onmessage = (e) => {
+        try {
+          const d = JSON.parse(e.data)
+          if (Array.isArray(d.detections)) detections.value = d.detections
+          if (d.telemetry) telemetry.value = d.telemetry
+        } catch {}
+      }
     }
   }
 
-  watch(() => [isContinuous.value, config.value.source, config.value.model, config.value.conf], () => {
+  watch(() => [isContinuous.value, config.value.source, config.value.model, config.value.conf, config.value.iou], () => {
     startLiveStream()
   })
 
   onUnmounted(() => {
+    isLoopActive = false
+    currentRunId++
     if (eventSource) eventSource.close()
-    if (frameInterval) clearInterval(frameInterval)
   })
 
   return { startLiveStream }

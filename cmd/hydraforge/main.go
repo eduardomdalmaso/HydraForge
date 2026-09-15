@@ -24,8 +24,9 @@ func main() {
 	// 1. Initialize Persistent Secondary Adapters (Driven)
 	dbPath := os.Getenv("SQLITE_DB_PATH")
 	if dbPath == "" {
-		dbPath = "/home/hades/Documents/HydraForge/datasets/hydraforge.db"
 		if _, err := os.Stat("datasets/hydraforge.db"); err == nil {
+			dbPath = "datasets/hydraforge.db"
+		} else {
 			dbPath = "datasets/hydraforge.db"
 		}
 	}

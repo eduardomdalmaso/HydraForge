@@ -28,7 +28,7 @@ const numClasses = computed(() => uniqueTargetClasses.value.length > 0 ? uniqueT
 
 const yamlString = computed(() => {
   const id = props.dataset?.id || props.dataset?.dataset_id || 'dataset'
-  const pathStr = props.dataset?.yaml_path ? props.dataset.yaml_path.replace('/data.yaml', '') : `/home/hades/datasets/${id}`
+  const pathStr = props.dataset?.yaml_path ? props.dataset.yaml_path.replace('/data.yaml', '') : `datasets/${id}`
   return `# Ultralytics YOLO26 Dataset Config\npath: ${pathStr}\ntrain: train/images\nval: valid/images\ntest: test/images\n\nnc: ${numClasses.value}\nnames:\n${uniqueTargetClasses.value.map((c, i) => `  ${i}: ${c}`).join('\n')}`
 })
 

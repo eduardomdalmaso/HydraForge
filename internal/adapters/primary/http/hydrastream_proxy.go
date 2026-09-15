@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -26,12 +27,14 @@ func HydraStreamProxy(targetURL string) http.HandlerFunc {
 		}
 		req.Host = target.Host
 
-		// Forward security headers
+		// Forward security headers or inject service key
 		if auth := req.Header.Get("Authorization"); auth != "" {
 			req.Header.Set("Authorization", auth)
 		}
 		if apiKey := req.Header.Get("X-API-Key"); apiKey != "" {
 			req.Header.Set("X-API-Key", apiKey)
+		} else if svcKey := os.Getenv("SERVICE_API_KEY"); svcKey != "" {
+			req.Header.Set("X-API-Key", svcKey)
 		}
 	}
 

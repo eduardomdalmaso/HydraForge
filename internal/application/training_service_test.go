@@ -25,7 +25,7 @@ func TestTrainingServiceLifecycle(t *testing.T) {
 		ModelArchitecture: "yolo11n",
 		Task:              domain.TaskDetect,
 		DatasetID:         "frota_urbana_4classes",
-		DatasetPath:       "/home/hades/datasets/frota_urbana_4classes/data.yaml",
+		DatasetPath:       "datasets/frota_urbana_4classes/data.yaml",
 		Hyperparameters: domain.Hyperparameters{
 			Epochs:    2,
 			BatchSize: 8,

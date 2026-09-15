@@ -63,8 +63,8 @@ const handleExecuteImport = async () => {
       </label>
 
       <div v-else style="margin: 0.6rem 0;">
-        <div style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.3rem;">FILESYSTEM PATH (e.g. /home/hades/Downloads/cell-phone):</div>
-        <input class="cyber-input" type="text" placeholder="/home/hades/Downloads/cell-phone" :value="folderPath" style="width: 100%; padding: 0.5rem; font-family: var(--font-mono); font-size: 0.8rem;" @input="(e) => folderPath = (e.target as HTMLInputElement).value" />
+        <div style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.3rem;">FILESYSTEM PATH (e.g. /path/to/dataset or datasets/cell-phone):</div>
+        <input class="cyber-input" type="text" placeholder="/path/to/dataset" :value="folderPath" style="width: 100%; padding: 0.5rem; font-family: var(--font-mono); font-size: 0.8rem;" @input="(e) => folderPath = (e.target as HTMLInputElement).value" />
       </div>
 
       <div v-if="error" style="color: var(--cb-magenta); font-size: 0.75rem; margin-top: 0.3rem;">[ALERT] {{ error }}</div>

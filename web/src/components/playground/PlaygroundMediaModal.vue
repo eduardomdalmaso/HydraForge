@@ -148,10 +148,10 @@ const handleDeleteFile = async (folder: string, filename: string) => {
             </div>
 
             <div class="folder-files-list">
-              <div v-if="folder.files.length === 0" style="font-size: 0.7rem; color: var(--cb-muted); padding: 0.3rem 0.5rem;">
+              <div v-if="!folder.files || folder.files.length === 0" style="font-size: 0.7rem; color: var(--cb-muted); padding: 0.3rem 0.5rem;">
                 (Pasta vazia)
               </div>
-              <div v-for="file in folder.files" :key="file.id" class="media-file-item">
+              <div v-for="file in (folder.files || [])" :key="file.id" class="media-file-item">
                 <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
                   <span style="color: var(--cb-green); font-size: 0.75rem;">▶</span>
                   <span class="file-name-txt" :title="file.name">{{ file.name }}</span>

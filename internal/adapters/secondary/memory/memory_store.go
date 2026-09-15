@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"hydraforge/internal/config"
 	"hydraforge/internal/domain"
 	"hydraforge/internal/ports"
 )
@@ -32,7 +33,7 @@ func NewMemoryStore() *MemoryStore {
 	}
 
 	// Auto-discover existing datasets
-	datasetsDirs := []string{"/home/hades/Documents/HydraForge/datasets", "datasets", "/home/hades/datasets"}
+	datasetsDirs := config.GetDatasetsSearchDirs()
 	for _, datasetsDir := range datasetsDirs {
 		if entries, err := os.ReadDir(datasetsDir); err == nil {
 			for _, entry := range entries {

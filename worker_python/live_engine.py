@@ -20,13 +20,20 @@ def resolve_weights(weights_arg):
         clean_id = os.path.basename(clean_id).replace(".pt", "").replace(".engine", "")
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    home_dir = os.path.expanduser("~")
+    runs_env = os.environ.get("RUNS_DIR", "")
+
     candidates = [
-        os.path.join("/home/hades/runs/train", clean_id, "weights", "best.pt"),
-        os.path.join("/home/hades/Documents/HydraForge/runs/train", clean_id, "weights", "best.pt"),
         os.path.join(base_dir, "runs/train", clean_id, "weights", "best.pt"),
         os.path.join(base_dir, "weights", f"{clean_id}.pt"),
         os.path.join(base_dir, "weights", f"{clean_id}.engine"),
     ]
+    if runs_env:
+        candidates.insert(0, os.path.join(runs_env, clean_id, "weights", "best.pt"))
+    candidates.extend([
+        os.path.join(home_dir, "runs/train", clean_id, "weights", "best.pt"),
+        os.path.join(home_dir, "Documents/HydraForge/runs/train", clean_id, "weights", "best.pt"),
+    ])
     for c in candidates:
         if os.path.exists(c):
             return c
@@ -47,20 +54,41 @@ def main():
     model = YOLO(weights_path)
     device = 0 if (torch.cuda.is_available() and args.device != "cpu") else "cpu"
 
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    home_dir = os.path.expanduser("~")
+    samples_env = os.environ.get("HYDRASTREAM_SAMPLES_DIR", "")
+
     while True:
         try:
             source_path = args.source
             if not os.path.exists(source_path):
                 # check shm sample
-                shm_sample = f"/home/hades/Documents/HydraStream/samples/{source_path}.jpg"
-                if os.path.exists(shm_sample):
-                    source_path = shm_sample
-                else:
+                sample_candidates = []
+                if samples_env:
+                    sample_candidates.extend([
+                        os.path.join(samples_env, f"{source_path}.jpg"),
+                        os.path.join(samples_env, source_path),
+                        os.path.join(samples_env, "cam_01.jpg"),
+                    ])
+                sample_candidates.extend([
+                    os.path.join(base_dir, "../HydraStream/samples", f"{source_path}.jpg"),
+                    os.path.join(base_dir, "../HydraStream/samples", source_path),
+                    os.path.join(home_dir, "Documents/HydraStream/samples", f"{source_path}.jpg"),
+                    os.path.join(home_dir, "Documents/HydraStream/samples", source_path),
+                    os.path.join(home_dir, "Documents/HydraStream/samples/cam_01.jpg"),
+                ])
+                found = False
+                for sc in sample_candidates:
+                    if os.path.exists(sc):
+                        source_path = sc
+                        found = True
+                        break
+                if not found:
                     time.sleep(0.04)
                     continue
 
             t0 = time.perf_counter()
-            results = model.predict(source=source_path, conf=args.conf, device=device, verbose=False)
+            results = model.track(source=source_path, conf=args.conf, device=device, persist=True, tracker="bytetrack.yaml", verbose=False)
             inf_ms = (time.perf_counter() - t0) * 1000.0
 
             detections = []
@@ -71,6 +99,11 @@ def main():
                     cls_name = res.names.get(cls_id, f"class_{cls_id}")
                     conf = float(box.conf[0].item())
                     xywhn = box.xywhn[0].tolist()
+
+                    track_id = None
+                    if box.id is not None:
+                        track_id = int(box.id[0].item())
+
                     left_pct = max(0.0, min(100.0, (xywhn[0] - xywhn[2] / 2.0) * 100.0))
                     top_pct = max(0.0, min(100.0, (xywhn[1] - xywhn[3] / 2.0) * 100.0))
                     w_pct = max(1.0, min(100.0, xywhn[2] * 100.0))
@@ -84,10 +117,14 @@ def main():
                     elif "phone" in cls_name.lower():
                         color = "#ff0055"
 
+                    det_id = track_id if track_id is not None else (idx + 1)
                     detections.append({
-                        "id": idx + 1,
+                        "id": det_id,
+                        "track_id": track_id,
                         "label": cls_name,
+                        "class_name": cls_name,
                         "conf": round(conf, 3),
+                        "confidence": round(conf, 3),
                         "box": [round(left_pct, 2), round(top_pct, 2), round(w_pct, 2), round(h_pct, 2)],
                         "color": color
                     })

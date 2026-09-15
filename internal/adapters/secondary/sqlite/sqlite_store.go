@@ -15,6 +15,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
+	"hydraforge/internal/config"
 	"hydraforge/internal/domain"
 	"hydraforge/internal/ports"
 )
@@ -173,16 +174,16 @@ func (s *SQLiteStore) migrate() error {
 }
 
 func (s *SQLiteStore) RescanDatasets() {
-	s.autoDiscoverDatasets("/home/hades/Documents/HydraForge/datasets")
-	s.autoDiscoverDatasets("datasets")
-	if _, err := os.Stat("/home/hades/datasets"); err == nil {
-		s.autoDiscoverDatasets("/home/hades/datasets")
+	for _, dir := range config.GetDatasetsSearchDirs() {
+		if _, err := os.Stat(dir); err == nil {
+			s.autoDiscoverDatasets(dir)
+		}
 	}
 	s.purgeStaleDatasets()
-	s.autoDiscoverTrainingRuns("/home/hades/Documents/HydraForge/runs/train")
-	s.autoDiscoverTrainingRuns("runs/train")
-	if _, err := os.Stat("/home/hades/runs/train"); err == nil {
-		s.autoDiscoverTrainingRuns("/home/hades/runs/train")
+	for _, dir := range config.GetRunsSearchDirs() {
+		if _, err := os.Stat(dir); err == nil {
+			s.autoDiscoverTrainingRuns(dir)
+		}
 	}
 }
 

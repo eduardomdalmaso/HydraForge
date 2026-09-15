@@ -25,7 +25,20 @@ runs/
 *.onnx
 *.engine
 *.tflite
+# Datasets & Media
 /datasets/
+/storage/media_sources/
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.MOV
+*.webm
+*.m4v
+*.mat
+*.db
+*.db-wal
+*.db-shm
 *.zip
 *.tar.gz
 
@@ -40,3 +53,4 @@ runs/
 .idea/
 .vscode/
 .DS_Store
+

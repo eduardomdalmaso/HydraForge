@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -212,16 +211,10 @@ func (s *TrainingService) DeleteDataset(ctx context.Context, datasetID string, d
 	if err == nil {
 		_ = s.datasetRepo.DeleteDataset(ctx, datasetID)
 	}
-	if deleteFiles {
-		targetDir := filepath.Join("/home/hades/datasets", datasetID)
-		if strings.HasPrefix(targetDir, "/home/hades/datasets/") {
-			_ = os.RemoveAll(targetDir)
-		}
-		if ds != nil && ds.YAMLPath != "" {
-			dir := filepath.Dir(ds.YAMLPath)
-			if strings.HasPrefix(dir, "/home/hades/datasets/") || strings.HasPrefix(dir, "datasets/") {
-				_ = os.RemoveAll(dir)
-			}
+	if deleteFiles && ds != nil && ds.YAMLPath != "" {
+		dir := filepath.Dir(ds.YAMLPath)
+		if dir != "" && dir != "/" && dir != "." {
+			_ = os.RemoveAll(dir)
 		}
 	}
 	return nil

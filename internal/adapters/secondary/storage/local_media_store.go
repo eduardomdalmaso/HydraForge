@@ -108,7 +108,7 @@ func (s *LocalMediaStore) ListSources(ctx context.Context) (*domain.MediaSources
 				continue
 			}
 
-			var files []domain.MediaFile
+			files := []domain.MediaFile{}
 			var folderBytes int64
 
 			for _, sub := range subEntries {

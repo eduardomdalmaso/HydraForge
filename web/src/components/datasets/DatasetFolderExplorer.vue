@@ -41,7 +41,7 @@ const filteredDatasets = computed(() => {
       <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 280px; background: #040609; border: 1px solid var(--vms-border); border-radius: 4px; padding: 0.4rem 0.75rem;">
         <span style="color: var(--vms-primary); font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700;">DIR:</span>
         <span class="text-mono" style="color: #cbd5e1; font-size: 0.8rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          /home/hades/datasets
+          datasets/
         </span>
         <span class="badge-cyan" style="font-size: 0.7rem; padding: 2px 7px;">{{ filteredDatasets.length }} PASTAS</span>
       </div>
