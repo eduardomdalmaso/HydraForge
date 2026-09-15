@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{
+import { ref, watch } from 'vue'
+
+const props = defineProps<{
   imageSrc?: string
   detections?: any[]
   selectedEntity?: any
@@ -9,11 +11,19 @@ defineProps<{
   activeStream?: any
   isWebcam?: boolean
   videoRef?: any
+  telemetry?: any
+  gpuStats?: any
+  config?: Record<string, any>
 }>()
 
 const emit = defineEmits<{
   (e: 'update:selectedEntity', det: any): void
 }>()
+
+const imgError = ref(false)
+watch(() => props.imageSrc, () => {
+  imgError.value = false
+})
 </script>
 
 <template>
@@ -39,56 +49,73 @@ const emit = defineEmits<{
       </span>
     </div>
 
-    <div class="viewport-canvas-area" style="background: #000; overflow: hidden;">
-      <div style="position: relative; display: inline-block; max-width: 100%; width: 100%; text-align: center;">
-        <video
-          v-if="isWebcam"
-          :ref="videoRef as any"
-          autoplay
-          playsinline
-          muted
-          class="viewport-img"
-          style="display: block; max-width: 100%; width: 100%; height: auto; max-height: 520px; object-fit: contain; margin: 0 auto;"
-        />
-        <img
-          v-else
-          :src="imageSrc || '/hydra-logo.jpg'"
-          alt="Tracking Feed"
-          class="viewport-img"
-          style="display: block; max-width: 100%; max-height: 520px; object-fit: contain; margin: 0 auto;"
-          @error="(e) => (e.target as HTMLImageElement).src = '/hydra-logo.jpg'"
-        />
-
-        <div
-          v-for="(det, idx) in (detections || [])"
-          :key="det.id || idx"
-          class="detection-box"
-          :style="{
-            left: `${det.box[0]}%`,
-            top: `${det.box[1]}%`,
-            width: `${det.box[2]}%`,
-            height: `${det.box[3]}%`,
-            borderColor: selectedEntity?.id === det.id ? 'var(--cb-yellow)' : (det.color || 'var(--cb-cyan)'),
-            boxShadow: selectedEntity?.id === det.id ? '0 0 10px var(--cb-yellow)' : '0 0 6px rgba(0,240,255,0.4)',
-            transition: 'left 0.06s linear, top 0.06s linear, width 0.06s linear, height 0.06s linear'
-          }"
-          @click="emit('update:selectedEntity', det)"
-        >
-          <span
-            class="detection-tag"
-            :style="{ background: selectedEntity?.id === det.id ? 'var(--cb-yellow)' : (det.color || 'var(--cb-cyan)'), color: '#07080c' }"
-          >
-            {{ det.label.toUpperCase() }} {{ (det.conf * 100).toFixed(0) }}%
-          </span>
+    <div class="viewport-stage">
+      <video
+        v-if="isWebcam"
+        id="hud-viewport-video"
+        :ref="videoRef as any"
+        autoplay
+        playsinline
+        muted
+        class="viewport-img"
+      />
+      <img
+        v-else-if="imageSrc && !imgError && imageSrc !== '/hydra-logo.jpg'"
+        id="hud-viewport-image"
+        :src="imageSrc"
+        alt="Tracking Feed"
+        class="viewport-img"
+        @error="imgError = true"
+      />
+      <div
+        v-else
+        class="camera-placeholder-hud"
+      >
+        <div style="position: relative; margin-bottom: 1.25rem;">
+          <svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke="#ff5e3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 14px rgba(255, 94, 58, 0.55));">
+            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+            <circle cx="12" cy="13" r="4" />
+            <circle cx="12" cy="13" r="1.5" fill="#ff5e3a" />
+          </svg>
+          <div style="position: absolute; top: -6px; right: -6px; width: 8px; height: 8px; border-radius: 50%; background: #ff5e3a; box-shadow: 0 0 8px #ff5e3a;" />
         </div>
+        <div style="color: #ff5e3a; font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.08em; margin-bottom: 0.4rem;">
+          [HYDRASTREAM SENSOR FEED // 16:9]
+        </div>
+        <div style="color: #8b94a0; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.04em;">
+          {{ isHydraLinked ? '// FLUXO DE VIDEO ZERO-COPY CALIBRADO' : '// STANDBY // SELECIONE UMA FONTE OU ATIVE A WEBCAM' }}
+        </div>
+      </div>
+
+      <div
+        v-for="(det, idx) in (detections || [])"
+        :key="det.id || idx"
+        class="detection-box"
+        :style="{
+          left: `${det.box[0]}%`,
+          top: `${det.box[1]}%`,
+          width: `${det.box[2]}%`,
+          height: `${det.box[3]}%`,
+          borderColor: selectedEntity?.id === det.id ? 'var(--cb-yellow)' : (det.color || 'var(--cb-cyan)'),
+          boxShadow: selectedEntity?.id === det.id ? '0 0 10px var(--cb-yellow)' : '0 0 6px rgba(0,240,255,0.4)',
+          transition: 'left 0.06s linear, top 0.06s linear, width 0.06s linear, height 0.06s linear'
+        }"
+        @click="emit('update:selectedEntity', det)"
+      >
+        <span
+          class="detection-tag"
+          :style="{ background: selectedEntity?.id === det.id ? 'var(--cb-yellow)' : (det.color || 'var(--cb-cyan)'), color: '#07080c' }"
+        >
+          {{ det.label.toUpperCase() }} {{ (det.conf * 100).toFixed(0) }}%
+        </span>
       </div>
     </div>
 
     <div class="viewport-footer-hud">
-      <span>FEED: {{ isWebcam ? 'USB V4L2 WEBCAM' : (activeStream?.stream_id?.toUpperCase() || 'CAM_ENTRANCE_01') }}</span>
-      <span>LATENCY: CUDA 13.3 (~3.8ms)</span>
-      <span>RTX 5090 REALTIME TRACKER</span>
-      <span style="color: var(--cb-green);">8.46 GB/s ZERO-COPY</span>
+      <span>FEED: <strong style="color: var(--cb-cyan);">{{ isWebcam ? 'USB V4L2 WEBCAM' : (activeStream?.stream_id?.toUpperCase() || (isHydraLinked ? 'HYDRASTREAM' : 'STANDBY')) }}</strong></span>
+      <span>LATENCY: <strong style="color: var(--cb-yellow);">{{ telemetry?.latency_ms ? `${telemetry.latency_ms.toFixed(1)} ms` : (isScanning ? 'CALCULATING...' : 'CUDA 13.3') }}</strong></span>
+      <span>DEVICE: <strong style="color: #ffffff;">{{ gpuStats?.name || 'NVIDIA RTX 5090' }}</strong><span style="color: var(--vms-text-muted); font-size: 0.65rem; margin-left: 4px;">// {{ config?.runtime === 'tensorrt' ? 'TENSORRT 10.X' : 'PYTORCH FP16' }}</span></span>
+      <span style="color: var(--cb-green);">{{ telemetry?.shm_bandwidth_gb ? `${telemetry.shm_bandwidth_gb.toFixed(2)} GB/s ZERO-COPY` : (isHydraLinked ? '8.46 GB/s /dev/shm' : 'LOCAL BUFFER') }}</span>
     </div>
   </div>
 </template>

@@ -870,9 +870,16 @@ func (h *TrainingHandler) HandleModels(w http.ResponseWriter, r *http.Request) {
 	jobs, err := h.useCase.ListTrainingJobs(r.Context(), "")
 	if err == nil {
 		for _, j := range jobs {
-			mapScore := math.Round(j.BestMAP50*72.0*100) / 100
+			mapScore := j.BestMAP50 * 100
+			if j.BestMAP50_95 > 0 {
+				mapScore = j.BestMAP50_95 * 100
+			}
 			if mapScore == 0 {
 				mapScore = 48.50
+			}
+			weightsPath := j.OutputWeights
+			if weightsPath == "" {
+				weightsPath = fmt.Sprintf("/home/hades/Documents/HydraForge/runs/train/%s/weights/best.pt", j.JobID)
 			}
 			customItem := ModelZooItem{
 				ID:          j.JobID,
@@ -880,7 +887,7 @@ func (h *TrainingHandler) HandleModels(w http.ResponseWriter, r *http.Request) {
 				Family:      "CUSTOM / TRAINED",
 				Task:        strings.ToUpper(string(j.Task)),
 				Desc:        fmt.Sprintf("Treinado fisicamente na RTX 5090 • Dataset: %s • %d Epochs", j.DatasetID, j.Hyperparameters.Epochs),
-				MAP50_95:    mapScore,
+				MAP50_95:    math.Round(mapScore*10) / 10,
 				Params:      20.4,
 				FLOPS:       68.0,
 				TRTLatency:  0.92,
@@ -888,7 +895,7 @@ func (h *TrainingHandler) HandleModels(w http.ResponseWriter, r *http.Request) {
 				Depth:       0.67,
 				Width:       0.75,
 				IsCustom:    true,
-				WeightsPath: fmt.Sprintf("/home/hades/runs/train/%s/weights/best.pt", j.JobID),
+				WeightsPath: weightsPath,
 			}
 			official = append([]ModelZooItem{customItem}, official...)
 		}

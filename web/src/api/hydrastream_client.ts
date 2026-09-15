@@ -37,7 +37,7 @@ export async function fetchHydraTelemetry(): Promise<any | null> {
 }
 
 export function getStreamSnapshotUrl(streamId?: string): string {
-  if (!streamId) return '/hydra-logo.jpg'
+  if (!streamId) return ''
   return `${HYDRASTREAM_BASE}/api/v1/streams/${encodeURIComponent(streamId)}/snapshot.jpg?t=${Date.now()}`
 }
 
