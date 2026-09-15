@@ -10,31 +10,32 @@ export function usePlaygroundStream(
   imageSrc: Ref<string>
 ) {
   let eventSource: EventSource | null = null
-  let webcamInterval: any = null
+  let frameInterval: any = null
 
   const startLiveStream = () => {
     if (eventSource) {
       eventSource.close()
       eventSource = null
     }
-    if (webcamInterval) {
-      clearInterval(webcamInterval)
-      webcamInterval = null
+    if (frameInterval) {
+      clearInterval(frameInterval)
+      frameInterval = null
     }
 
+    const isVideoLoop = config.value.source?.startsWith('video:')
+    const isFrameUploader = isWebcam.value || isVideoLoop
+
     if (!isContinuous.value) {
-      if (!isWebcam.value) {
+      if (!isFrameUploader) {
         imageSrc.value = `/api/v1/hydrastream/api/v1/streams/${config.value.source}/snapshot.jpg?t=${Date.now()}`
       }
       return
     }
 
-    if (!isWebcam.value) {
+    if (!isFrameUploader) {
       imageSrc.value = `/api/v1/hydrastream/api/v1/streams/${config.value.source}/mjpeg?t=${Date.now()}`
-    }
-
-    if (isWebcam.value) {
-      webcamInterval = setInterval(() => {
+    } else {
+      frameInterval = setInterval(() => {
         const b64 = captureFrame()
         if (b64) {
           fetch('/api/v1/inference/frame', {
@@ -43,10 +44,11 @@ export function usePlaygroundStream(
             body: JSON.stringify({ image_base64: b64 })
           }).catch(() => {})
         }
-      }, 40)
+      }, 50)
     }
 
-    eventSource = new EventSource(`/api/v1/inference/live?model=${encodeURIComponent(config.value.model)}&source=${encodeURIComponent(config.value.source)}&conf=${config.value.conf}`)
+    const liveSrc = isFrameUploader ? 'webcam' : config.value.source
+    eventSource = new EventSource(`/api/v1/inference/live?model=${encodeURIComponent(config.value.model)}&source=${encodeURIComponent(liveSrc)}&conf=${config.value.conf}`)
     eventSource.onmessage = (e) => {
       try {
         const d = JSON.parse(e.data)
@@ -62,7 +64,7 @@ export function usePlaygroundStream(
 
   onUnmounted(() => {
     if (eventSource) eventSource.close()
-    if (webcamInterval) clearInterval(webcamInterval)
+    if (frameInterval) clearInterval(frameInterval)
   })
 
   return { startLiveStream }

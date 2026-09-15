@@ -13,6 +13,7 @@ import (
 	primaryHttp "hydraforge/internal/adapters/primary/http"
 	"hydraforge/internal/adapters/secondary/gpu"
 	"hydraforge/internal/adapters/secondary/sqlite"
+	"hydraforge/internal/adapters/secondary/storage"
 	"hydraforge/internal/adapters/secondary/worker"
 	"hydraforge/internal/application"
 )
@@ -34,6 +35,16 @@ func main() {
 	}
 	log.Printf("💾 [HydraForge] SQLite Database initialized at %s (WAL Mode)", dbPath)
 
+	mediaStorePath := os.Getenv("MEDIA_STORE_PATH")
+	if mediaStorePath == "" {
+		mediaStorePath = "storage/media_sources"
+	}
+	mediaStore, err := storage.NewLocalMediaStore(mediaStorePath)
+	if err != nil {
+		log.Fatalf("❌ Failed to initialize Local Media Store: %v", err)
+	}
+	log.Printf("🎬 [HydraForge] Local Media Store initialized at %s", mediaStorePath)
+
 	gpuDetector := gpu.NewDetector()
 	pyWorker := worker.NewPythonWorker()
 
@@ -45,12 +56,14 @@ func main() {
 
 	// 3. Initialize Application Service (Use Case)
 	trainingService := application.NewTrainingService(sqlStore, sqlStore, sqlStore, sqlStore, pyWorker, gpuDetector)
+	mediaService := application.NewMediaService(mediaStore)
 
 	// 4. Initialize Primary HTTP Adapter (Driving)
 	handler := primaryHttp.NewTrainingHandler(trainingService)
 	bmkHandler := primaryHttp.NewBenchmarkHandler(trainingService)
+	mediaHandler := primaryHttp.NewMediaHandler(mediaService)
 	mux := http.NewServeMux()
-	primaryHttp.RegisterRoutes(mux, handler, bmkHandler)
+	primaryHttp.RegisterRoutes(mux, handler, bmkHandler, mediaHandler)
 
 	// Static SPA Web UI
 	mux.Handle("/", http.FileServer(http.Dir("./web/dist")))

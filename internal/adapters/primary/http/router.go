@@ -8,7 +8,7 @@ import (
 )
 
 // RegisterRoutes registers all API endpoints on the mux.
-func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler) {
+func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler, mh *MediaHandler) {
 	// Helper to protect endpoints with Auth and optional RBAC middlewares
 	authEndpoint := func(pattern string, fn http.HandlerFunc, roles ...string) {
 		var handler http.Handler = http.HandlerFunc(fn)
@@ -68,10 +68,20 @@ func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler
 	authEndpoint("/api/v1/benchmarks/formats", bh.HandleBenchmarkFormats)
 	authEndpoint("/api/v1/benchmarks/", bh.HandleBenchmarkByID)
 
-	// 5. HydraStream Integration Proxy (Port 8080)
+	// 5. Media Sources API (Video Loops & Folders)
+	if mh != nil {
+		authEndpoint("/api/v1/media/sources", mh.HandleSources)
+		authEndpoint("/api/v1/media/folders", mh.HandleFolders, "admin", "operator", "superadmin")
+		authEndpoint("/api/v1/media/folders/", mh.HandleFolders, "admin", "operator", "superadmin")
+		authEndpoint("/api/v1/media/upload", mh.HandleUpload, "admin", "operator", "superadmin")
+		authEndpoint("/api/v1/media/files/", mh.HandleFiles, "admin", "operator", "superadmin")
+		mux.HandleFunc("/api/v1/media/stream/", mh.HandleStream)
+	}
+
+	// 6. HydraStream Integration Proxy (Port 8080)
 	authEndpoint("/api/v1/hydrastream/", HydraStreamProxy("http://localhost:8080"))
 
-	// 6. Real-Time Optical YOLO Inference (NVIDIA RTX 5090)
+	// 7. Real-Time Optical YOLO Inference (NVIDIA RTX 5090)
 	authEndpoint("/api/v1/inference/predict", HandleInferencePredict)
 	authEndpoint("/api/v1/inference/live", HandleInferenceLiveStream)
 	authEndpoint("/api/v1/inference/frame", HandleWebcamFrameUpload)

@@ -32,13 +32,14 @@ export function useWebcamStream(isWebcam: Ref<boolean>) {
   })
 
   const captureFrame = (): string | null => {
-    if (isWebcam.value && videoRef.value && videoRef.value.videoWidth) {
+    const el = videoRef.value || (document.getElementById('hud-viewport-video') as HTMLVideoElement)
+    if (el && el.videoWidth > 0 && el.videoHeight > 0) {
       const canvas = document.createElement('canvas')
-      canvas.width = videoRef.value.videoWidth
-      canvas.height = videoRef.value.videoHeight
+      canvas.width = el.videoWidth
+      canvas.height = el.videoHeight
       const ctx = canvas.getContext('2d')
       if (ctx) {
-        ctx.drawImage(videoRef.value, 0, 0)
+        ctx.drawImage(el, 0, 0)
         return canvas.toDataURL('image/jpeg', 0.85)
       }
     }

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import type { MediaFolder } from '../../api/media_client'
 
 const props = withDefaults(defineProps<{
   config: Record<string, any>
   modelsList?: any[]
   hydraStreams?: any[]
+  mediaFolders?: MediaFolder[]
   isHydraOnline?: boolean
   isRunning?: boolean
   isContinuous?: boolean
@@ -14,6 +16,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   modelsList: () => [],
   hydraStreams: () => [],
+  mediaFolders: () => [],
   isHydraOnline: false,
   isRunning: false,
   isContinuous: false
@@ -23,6 +26,7 @@ const emit = defineEmits<{
   (e: 'update:config', cfg: Record<string, any>): void
   (e: 'update:isContinuous', val: boolean): void
   (e: 'runInference'): void
+  (e: 'openMediaModal'): void
 }>()
 
 const activeTab = ref<'source' | 'tuning' | 'telemetry'>('source')
@@ -34,15 +38,9 @@ const updateField = (field: string, val: any) => emit('update:config', { ...prop
 <template>
   <div class="cyber-card playground-unified-panel">
     <div class="panel-tab-nav">
-      <button class="panel-tab-btn" :class="{ active: activeTab === 'source' }" @click="activeTab = 'source'">
-        1. MODEL & SOURCE
-      </button>
-      <button class="panel-tab-btn" :class="{ active: activeTab === 'tuning' }" @click="activeTab = 'tuning'">
-        2. HYPER-TUNING
-      </button>
-      <button class="panel-tab-btn" :class="{ active: activeTab === 'telemetry' }" @click="activeTab = 'telemetry'">
-        3. HARDWARE & SHM
-      </button>
+      <button class="panel-tab-btn" :class="{ active: activeTab === 'source' }" @click="activeTab = 'source'">1. MODEL & SOURCE</button>
+      <button class="panel-tab-btn" :class="{ active: activeTab === 'tuning' }" @click="activeTab = 'tuning'">2. HYPER-TUNING</button>
+      <button class="panel-tab-btn" :class="{ active: activeTab === 'telemetry' }" @click="activeTab = 'telemetry'">3. HARDWARE & SHM</button>
     </div>
 
     <!-- TAB 1: SOURCE & MODEL -->
@@ -63,9 +61,11 @@ const updateField = (field: string, val: any) => emit('update:config', { ...prop
       </div>
 
       <div class="selector-group">
-        <div class="selector-label">
+        <div class="selector-label" style="display: flex; justify-content: space-between; align-items: center;">
           <span>INPUT MEDIA SOURCE</span>
-          <span style="font-size: 0.65rem; color: var(--cb-cyan);">HARDWARE // CAMERAS</span>
+          <button type="button" class="del-btn" style="color: var(--cb-cyan); border-color: rgba(0,240,255,0.4);" @click="emit('openMediaModal')">
+            + GERENCIAR VÍDEOS
+          </button>
         </div>
         <select class="cyber-select" :value="config.source" @change="(e) => updateField('source', (e.target as HTMLSelectElement).value)">
           <optgroup label="[LOCAL HARDWARE DEVICES]">
@@ -77,6 +77,13 @@ const updateField = (field: string, val: any) => emit('update:config', { ...prop
             </template>
             <option v-else value="cam_entrance_01">[STREAM] CAM_ENTRANCE_01 // 1080P @ 30 FPS</option>
           </optgroup>
+          <template v-for="folder in mediaFolders" :key="folder.name">
+            <optgroup v-if="folder.files && folder.files.length > 0" :label="`[VIDEO LOOP // ${folder.label}]`">
+              <option v-for="f in folder.files" :key="f.id" :value="`video:${f.folder}/${f.name}`">
+                [LOOP] {{ f.name.toUpperCase() }} // {{ (f.size_bytes / 1024 / 1024).toFixed(1) }} MB
+              </option>
+            </optgroup>
+          </template>
         </select>
       </div>
 
@@ -92,7 +99,7 @@ const updateField = (field: string, val: any) => emit('update:config', { ...prop
         <button class="cyber-action-btn" style="flex: 1; padding: 0.75rem;" :disabled="isRunning" @click="emit('runInference')">
           {{ isRunning ? 'SCANNING...' : 'SCAN FRAME // TRIGGER' }}
         </button>
-        <button class="cyber-action-btn" :style="{ padding: '0.75rem', background: isContinuous ? 'var(--cb-green)' : 'rgba(0,240,255,0.1)', color: isContinuous ? '#07080c' : 'var(--cb-cyan)', border: '1px solid var(--cb-cyan)' }" title="Toggle Continuous Realtime HUD Scanner" @click="emit('update:isContinuous', !isContinuous)">
+        <button class="cyber-action-btn" :style="{ padding: '0.75rem', background: isContinuous ? 'var(--cb-green)' : 'rgba(0,240,255,0.1)', color: isContinuous ? '#07080c' : 'var(--cb-cyan)', border: '1px solid var(--cb-cyan)' }" @click="emit('update:isContinuous', !isContinuous)">
           {{ isContinuous ? 'LIVE SCAN [ACTIVE]' : 'LIVE SCAN [IDLE]' }}
         </button>
       </div>
@@ -109,7 +116,6 @@ const updateField = (field: string, val: any) => emit('update:config', { ...prop
           <input type="range" min="0.05" max="0.95" step="0.05" :value="config.conf" @input="(e) => updateField('conf', parseFloat((e.target as HTMLInputElement).value))" />
         </div>
       </div>
-
       <div class="selector-group">
         <div class="selector-label">
           <span>IOU NMS THRESHOLD</span>
@@ -123,7 +129,6 @@ const updateField = (field: string, val: any) => emit('update:config', { ...prop
           <label for="nmsFreeCheckUnified" style="font-size: 0.75rem; color: #cbd5e1; cursor: pointer;">NMS-FREE END-TO-END OUTPUT (YOLO26)</label>
         </div>
       </div>
-
       <div class="selector-group" style="border-top: 1px solid rgba(0,240,255,0.15); padding-top: 0.65rem;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div>
@@ -131,16 +136,6 @@ const updateField = (field: string, val: any) => emit('update:config', { ...prop
             <div style="font-size: 0.68rem; color: #94a3b8;">Fatiamento dinâmico para alvos pequenos</div>
           </div>
           <button type="button" class="cyber-pill" :class="{ active: config.sahi }" @click="updateField('sahi', !config.sahi)">{{ config.sahi ? 'ON' : 'OFF' }}</button>
-        </div>
-      </div>
-
-      <div class="selector-group" style="border-top: 1px solid rgba(0,240,255,0.15); padding-top: 0.65rem; margin-bottom: 0;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <div style="font-family: var(--font-oxanium); font-size: 0.82rem; font-weight: 700;" :style="{ color: config.isolateBg ? 'var(--cb-green)' : '#fff' }">ALPHA BACKGROUND REMOVER (PNG)</div>
-            <div style="font-size: 0.68rem; color: #94a3b8;">Máscaras transparentes por instância</div>
-          </div>
-          <button type="button" class="cyber-pill" :class="{ active: config.isolateBg }" @click="updateField('isolateBg', !config.isolateBg)">{{ config.isolateBg ? 'ON' : 'OFF' }}</button>
         </div>
       </div>
     </div>
@@ -153,7 +148,7 @@ const updateField = (field: string, val: any) => emit('update:config', { ...prop
       </div>
       <div class="telemetry-row">
         <span class="k">VRAM ALLOCATION</span>
-        <span class="v" style="color: var(--cb-cyan);">{{ gpuStats ? `${(gpuStats.used_vram_mb || gpuStats.vram_used_mb || 0).toLocaleString()} / ${(gpuStats.total_vram_mb || gpuStats.vram_total_mb || 32607).toLocaleString()} MB` : 'STANDBY' }}</span>
+        <span class="v" style="color: var(--cb-cyan);">{{ gpuStats ? `${(gpuStats.used_vram_mb || gpuStats.vram_used_mb || 0).toLocaleString()} / ${(gpuStats.total_vram_mb || 32607).toLocaleString()} MB` : 'STANDBY' }}</span>
       </div>
       <div class="telemetry-row">
         <span class="k">YOLO INFERENCE (RTX 5090)</span>
@@ -162,10 +157,6 @@ const updateField = (field: string, val: any) => emit('update:config', { ...prop
       <div class="telemetry-row">
         <span class="k">SUSTAINED SPEED</span>
         <span class="v" style="color: var(--cb-yellow); font-size: 0.85rem;">{{ telemetry?.fps ? `${telemetry.fps} FPS` : 'STANDBY' }}</span>
-      </div>
-      <div class="telemetry-row" style="border-bottom: none;">
-        <span class="k">POSIX /dev/shm OCCUPANCY</span>
-        <span class="v">{{ hydraTelemetry?.posix_shm_occupancy !== undefined ? `${hydraTelemetry.posix_shm_occupancy}%` : '0.1%' }}</span>
       </div>
     </div>
   </div>

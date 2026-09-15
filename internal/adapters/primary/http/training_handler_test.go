@@ -18,6 +18,7 @@ import (
 	primaryHttp "hydraforge/internal/adapters/primary/http"
 	"hydraforge/internal/adapters/secondary/gpu"
 	"hydraforge/internal/adapters/secondary/sqlite"
+	"hydraforge/internal/adapters/secondary/storage"
 	"hydraforge/internal/adapters/secondary/worker"
 	"hydraforge/internal/application"
 )
@@ -45,22 +46,29 @@ func generateTestToken(tenantID, role string) string {
 }
 
 func setupTestMux(t *testing.T) *http.ServeMux {
-	tmpDB := fmt.Sprintf("/tmp/test_hydraforge_%d.db", time.Now().UnixNano())
-	t.Cleanup(func() { os.Remove(tmpDB) })
+	tmpDir := t.TempDir()
+	tmpDB := tmpDir + "/test.db"
 
 	sqlStore, err := sqlite.NewSQLiteStore(tmpDB)
 	if err != nil {
 		t.Fatalf("failed to init test sqlite store: %v", err)
 	}
 
+	mediaStore, err := storage.NewLocalMediaStore(tmpDir + "/media")
+	if err != nil {
+		t.Fatalf("failed to init test media store: %v", err)
+	}
+
 	gpuDetector := gpu.NewDetector()
 	pyWorker := worker.NewPythonWorker()
 	svc := application.NewTrainingService(sqlStore, sqlStore, sqlStore, sqlStore, pyWorker, gpuDetector)
+	mediaSvc := application.NewMediaService(mediaStore)
 
 	handler := primaryHttp.NewTrainingHandler(svc)
 	bmkHandler := primaryHttp.NewBenchmarkHandler(svc)
+	mediaHandler := primaryHttp.NewMediaHandler(mediaSvc)
 	mux := http.NewServeMux()
-	primaryHttp.RegisterRoutes(mux, handler, bmkHandler)
+	primaryHttp.RegisterRoutes(mux, handler, bmkHandler, mediaHandler)
 
 	return mux
 }
@@ -137,5 +145,53 @@ func TestRegisterPathSensitiveDirectoryBlocked(t *testing.T) {
 
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("expected 403 Forbidden on registering /etc, got %d", w.Code)
+	}
+}
+
+func TestMediaFolderCreateAndUpload(t *testing.T) {
+	mux := setupTestMux(t)
+
+	// 1. Create folder "carros"
+	body := `{"name":"carros"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/media/folders", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+generateTestToken("tenant_alpha", "admin"))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created on media folder create, got %d", w.Code)
+	}
+
+	// 2. Upload video file to folder "carros"
+	var uploadBody bytes.Buffer
+	mw := multipart.NewWriter(&uploadBody)
+	_ = mw.WriteField("folder", "carros")
+	fw, _ := mw.CreateFormFile("file", "test_video.mp4")
+	fw.Write([]byte("fake-mp4-video-content-stream"))
+	mw.Close()
+
+	uploadReq := httptest.NewRequest(http.MethodPost, "/api/v1/media/upload", &uploadBody)
+	uploadReq.Header.Set("Content-Type", mw.FormDataContentType())
+	uploadReq.Header.Set("Authorization", "Bearer "+generateTestToken("tenant_alpha", "admin"))
+	wUpload := httptest.NewRecorder()
+	mux.ServeHTTP(wUpload, uploadReq)
+
+	if wUpload.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created on media upload, got %d: %s", wUpload.Code, wUpload.Body.String())
+	}
+
+	// 3. List media sources
+	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/media/sources", nil)
+	listReq.Header.Set("Authorization", "Bearer "+generateTestToken("tenant_alpha", "viewer"))
+	wList := httptest.NewRecorder()
+	mux.ServeHTTP(wList, listReq)
+
+	if wList.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK on media list, got %d", wList.Code)
+	}
+
+	if !bytes.Contains(wList.Body.Bytes(), []byte("test_video.mp4")) {
+		t.Fatalf("expected list response to contain test_video.mp4, got %s", wList.Body.String())
 	}
 }

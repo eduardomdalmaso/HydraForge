@@ -8,6 +8,9 @@ export interface DetectionEvent {
   timestamp: string
   color: string
   thumbnailUrl?: string
+  sourceCategory?: string
+  sourceFile?: string
+  vaultStatus?: 'idle' | 'sending' | 'synced' | 'error'
 }
 
 export function useDetectionHistory() {
@@ -50,12 +53,23 @@ export function useDetectionHistory() {
 
   const pushDetections = (
     newDets: any[],
-    sourceEl: HTMLImageElement | HTMLVideoElement | null = null
+    sourceEl: HTMLImageElement | HTMLVideoElement | null = null,
+    sourceRaw: string = ''
   ) => {
     if (!newDets || newDets.length === 0) return
 
     const now = new Date()
     const timeStr = now.toTimeString().split(' ')[0] + '.' + Math.floor(now.getMilliseconds() / 100)
+
+    let category = 'default'
+    let filename = sourceRaw
+    if (sourceRaw.startsWith('video:')) {
+      const parts = sourceRaw.replace('video:', '').split('/')
+      category = parts[0] || 'root'
+      filename = parts[1] || parts[0]
+    } else if (sourceRaw) {
+      category = sourceRaw
+    }
 
     const events: DetectionEvent[] = newDets.map((d, i) => {
       const evtId = d.id ? `${d.id}` : `det_${Date.now()}_${i}`
@@ -67,7 +81,10 @@ export function useDetectionHistory() {
         box: d.box || [10, 10, 30, 30],
         timestamp: timeStr,
         color: d.color || '#00f0ff',
-        thumbnailUrl: thumb
+        thumbnailUrl: thumb,
+        sourceCategory: category,
+        sourceFile: filename,
+        vaultStatus: 'idle'
       }
     })
 

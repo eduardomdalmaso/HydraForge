@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import PlaygroundViewport from '../components/playground/PlaygroundViewport.vue'
 import PlaygroundUnifiedPanel from '../components/playground/PlaygroundUnifiedPanel.vue'
 import PlaygroundDetectionFeed from '../components/playground/PlaygroundDetectionFeed.vue'
+import PlaygroundMediaModal from '../components/playground/PlaygroundMediaModal.vue'
 import { useWebcamStream } from '../components/playground/useWebcamStream'
 import { usePlaygroundStream } from '../components/playground/usePlaygroundStream'
 import { usePlaygroundInit } from '../components/playground/usePlaygroundInit'
 import { useDetectionHistory } from '../components/playground/useDetectionHistory'
+import { fetchMediaSources, type MediaFolder } from '../api/media_client'
 import { runRealInferenceAPI } from '../api/inference_client'
 
 const config = ref({
@@ -28,6 +30,16 @@ const isContinuous = ref(false)
 const telemetry = ref<any>(null)
 const imageSrc = ref('/api/v1/hydrastream/api/v1/streams/cam_entrance_01/snapshot.jpg')
 
+const mediaFolders = ref<MediaFolder[]>([])
+const showMediaModal = ref(false)
+
+const loadMediaFolders = async () => {
+  const data = await fetchMediaSources()
+  mediaFolders.value = data.folders || []
+}
+
+onMounted(loadMediaFolders)
+
 const isWebcam = computed(() => config.value.source === 'webcam')
 const activeStream = computed(() => hydraStreams.value.find(s => s.stream_id === config.value.source) || (hydraStreams.value[0] || null))
 
@@ -38,8 +50,10 @@ const { history, pushDetections, clearHistory } = useDetectionHistory()
 
 watch(detections, (newDets) => {
   if (newDets && newDets.length > 0) {
-    const el = (isWebcam.value ? document.getElementById('hud-viewport-video') : document.getElementById('hud-viewport-image')) as any
-    pushDetections(newDets, el)
+    const el = (isWebcam.value || config.value.source?.startsWith('video:'))
+      ? document.getElementById('hud-viewport-video')
+      : document.getElementById('hud-viewport-image') as any
+    pushDetections(newDets, el, config.value.source)
   }
 }, { deep: true })
 
@@ -47,11 +61,15 @@ const handleInference = async () => {
   const b64 = captureFrame()
   const res = await runRealInferenceAPI(config.value, b64)
   if (res) {
-    if (res.displayImageUrl && !isWebcam.value && !isContinuous.value) imageSrc.value = res.displayImageUrl
+    if (res.displayImageUrl && !isWebcam.value && !config.value.source?.startsWith('video:') && !isContinuous.value) {
+      imageSrc.value = res.displayImageUrl
+    }
     if (Array.isArray(res.detections)) {
       detections.value = res.detections
-      const el = (isWebcam.value ? document.getElementById('hud-viewport-video') : document.getElementById('hud-viewport-image')) as any
-      pushDetections(res.detections, el)
+      const el = (isWebcam.value || config.value.source?.startsWith('video:'))
+        ? document.getElementById('hud-viewport-video')
+        : document.getElementById('hud-viewport-image') as any
+      pushDetections(res.detections, el, config.value.source)
     }
     if (res.telemetry) telemetry.value = res.telemetry
   }
@@ -62,10 +80,10 @@ const handleInference = async () => {
   <div class="view-container playground-container">
     <div class="cockpit-full-header">
       <h1 class="cockpit-main-title">PLAYGROUND DE INFERENCIA & TRACKING</h1>
-      <p class="cockpit-main-subtitle">HARDWARE NATIVO RTX 5090 // FLUXO CONTINUO HYDRASTREAM // INFERENCIA AO VIVO</p>
+      <p class="cockpit-main-subtitle">HARDWARE NATIVO RTX 5090 // VIDEOS EM LOOP .MP4 // INFERENCIA AO VIVO</p>
     </div>
 
-    <!-- TOP ROW: LEFT VIEWPORT (720P) + RIGHT CONTROLS PANEL -->
+    <!-- TOP ROW: LEFT VIEWPORT (720P 16:9) + RIGHT CONTROLS PANEL -->
     <div class="playground-top-row">
       <div class="playground-viewport-col">
         <PlaygroundViewport
@@ -74,7 +92,7 @@ const handleInference = async () => {
           :selectedEntity="selectedEntity"
           :isScanning="isScanning"
           :isContinuous="isContinuous"
-          :isHydraLinked="!isWebcam && hydraStreams.length > 0"
+          :isHydraLinked="!isWebcam && !config.source?.startsWith('video:') && hydraStreams.length > 0"
           :activeStream="activeStream"
           :isWebcam="isWebcam"
           :videoRef="videoRef"
@@ -90,6 +108,7 @@ const handleInference = async () => {
           :config="config"
           :modelsList="modelsList"
           :hydraStreams="hydraStreams"
+          :mediaFolders="mediaFolders"
           :isHydraOnline="hydraStreams.length > 0"
           :isRunning="isScanning"
           :isContinuous="isContinuous"
@@ -99,6 +118,7 @@ const handleInference = async () => {
           @update:config="(c) => config = c as any"
           @update:isContinuous="(v) => isContinuous = v"
           @runInference="async () => { isScanning = true; await handleInference(); isScanning = false; }"
+          @openMediaModal="showMediaModal = true"
         />
       </div>
     </div>
@@ -112,5 +132,12 @@ const handleInference = async () => {
         @clearHistory="clearHistory"
       />
     </div>
+
+    <!-- MEDIA MANAGER MODAL -->
+    <PlaygroundMediaModal
+      v-if="showMediaModal"
+      @close="showMediaModal = false"
+      @mediaUpdated="loadMediaFolders"
+    />
   </div>
 </template>
