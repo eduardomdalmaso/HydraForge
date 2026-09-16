@@ -26,7 +26,7 @@ watch(() => props.isOpen, (open) => {
     const id = ds.id || ds.dataset_id
     initial[id] = {}
     ;(ds.classes || []).forEach((cls: string) => {
-      initial[id][cls] = props.savedMappings[id]?.[cls] || autoSuggestCategory(cls)
+      initial[id][cls] = props.savedMappings[id]?.[cls] || autoSuggestCategory(cls, ds.name || id)
     })
   })
   mappings.value = initial
@@ -43,7 +43,7 @@ const setMap = (dsId: string, cls: string, val: string) => {
   mappings.value = { ...mappings.value, [dsId]: { ...(mappings.value[dsId] || {}), [cls]: val } }
 }
 
-const targetOptions = computed(() => Array.from(new Set([...props.datasets.flatMap(d => d.classes || []), ...Object.values(mappings.value).flatMap(m => Object.values(m)), 'car', 'motorcycle', 'truck', 'bus', 'cell-phone', 'ignore'])).filter(Boolean))
+const targetOptions = computed(() => Array.from(new Set([...props.datasets.flatMap(d => d.classes || []), ...Object.values(mappings.value).flatMap(m => Object.values(m)), 'car', 'motorcycle', 'truck', 'bus', 'person', 'bicycle', 'cell-phone', 'ignore'])).filter(Boolean))
 const totalImgs = computed(() => props.datasets.filter(d => selectedDsIds.value.includes(d.id || d.dataset_id)).reduce((acc, d) => acc + (d.train_count || d.train_images || 0) + (d.val_count || d.val_images || 0), 0))
 
 const handleExecute = async () => {
@@ -53,7 +53,7 @@ const handleExecute = async () => {
     const res = await fetch('/api/v1/training/datasets/merge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target_name: mergedName.value, dataset_ids: selectedDsIds.value, mappings: mappings.value, classes: activeTargets.length ? activeTargets : ['cell-phone'] })
+      body: JSON.stringify({ target_name: mergedName.value, dataset_ids: selectedDsIds.value, mappings: mappings.value, classes: activeTargets.length ? activeTargets : ['car', 'motorcycle', 'truck', 'bus'] })
     })
     if (res.ok) {
       emit('datasetsMerged', await res.json())

@@ -18,9 +18,10 @@ const handleRemapClass = (rawClass: string, targetCategory: string) => {
 }
 
 const rawClasses = computed(() => props.dataset?.classes || [])
+const datasetCtx = computed(() => props.dataset?.name || props.dataset?.id || props.dataset?.dataset_id || '')
 const uniqueTargetClasses = computed(() => {
   const targetNames = rawClasses.value
-    .map((cls: string) => classMappings.value[cls] || autoSuggestCategory(cls))
+    .map((cls: string) => classMappings.value[cls] || autoSuggestCategory(cls, datasetCtx.value))
     .filter((c: string) => c !== 'ignore' && c !== 'ignorar')
   return Array.from(new Set(targetNames))
 })
@@ -44,7 +45,7 @@ const applyMappings = () => {
 <template>
   <div v-if="!dataset" class="cyber-card">
     <div class="card-header"><span class="card-title">2. CLASS MAPPER</span></div>
-    <p style="color: #64748b; font-size: 0.8rem;">No dataset selected.</p>
+    <div style="font-size: 0.75rem; color: #64748b; padding: 2rem; text-align: center;">SELECT DATASET IN TABLE TO VIEW/MAP CLASSES</div>
   </div>
 
   <div v-else class="cyber-card" style="height: 380px; display: flex; flex-direction: column;">
@@ -57,7 +58,7 @@ const applyMappings = () => {
       <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.3rem; max-height: 120px; overflow-y: auto; padding-right: 2px;">
         <button v-for="cls in rawClasses" :key="cls" type="button" class="class-mapper-row" style="width: 100%; cursor: pointer; text-align: left;" @click="activeModalClass = cls">
           <span class="class-mapper-label" :title="cls">[CLS] "{{ cls }}"</span>
-          <span class="badge-yellow" style="font-size: 0.62rem; padding: 0.1rem 0.35rem;">➔ {{ classMappings[cls] || autoSuggestCategory(cls) }}</span>
+          <span class="badge-yellow" style="font-size: 0.62rem; padding: 0.1rem 0.35rem;">➔ {{ classMappings[cls] || autoSuggestCategory(cls, datasetCtx) }}</span>
         </button>
       </div>
     </div>
@@ -74,6 +75,6 @@ const applyMappings = () => {
       </div>
     </div>
 
-    <ClassSnapshotModal :isOpen="Boolean(activeModalClass)" :datasetId="dataset.id || dataset.dataset_id" :className="activeModalClass" :currentTarget="activeModalClass ? (classMappings[activeModalClass] || autoSuggestCategory(activeModalClass)) : undefined" @close="activeModalClass = null" @remap="handleRemapClass" />
+    <ClassSnapshotModal :isOpen="Boolean(activeModalClass)" :datasetId="dataset.id || dataset.dataset_id" :className="activeModalClass" :currentTarget="activeModalClass ? (classMappings[activeModalClass] || autoSuggestCategory(activeModalClass, datasetCtx)) : undefined" @close="activeModalClass = null" @remap="handleRemapClass" />
   </div>
 </template>

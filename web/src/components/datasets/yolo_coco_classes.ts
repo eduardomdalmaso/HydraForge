@@ -57,15 +57,23 @@ export function decodeYoloClass(raw: any): string {
   return String(raw)
 }
 
-export function autoSuggestCategory(raw: any): string {
+export function autoSuggestCategory(raw: any, contextName?: string): string {
   const str = String(raw || '').toLowerCase().trim()
+  const ctx = String(contextName || '').toLowerCase().trim()
   const num = parseInt(raw, 10)
-  if (str.includes('cell') || str.includes('phone')) return 'cell-phone'
-  if (num === 7 || str.includes('truck') || str === 'caminhao') return 'truck'
-  if (num === 5 || str.includes('bus') || str === 'onibus') return 'bus'
-  if (num === 3 || str.includes('bike') || str.includes('moto') || str.includes('cycle')) return 'motorcycle'
-  if (num === 0 || str.includes('person') || str.includes('pedestrian') || str === 'pessoa') return 'person'
-  if (num === 1 || str.includes('bicycle') || str === 'bicicleta') return 'bicycle'
-  if (num === 2 || str.includes('car') || str.includes('van') || str.includes('auto') || str === 'carro') return 'car'
+
+  // Contextual dataset hints when class is raw numeric from specialized datasets
+  if (ctx.includes('truck') && (num === 2 || num === 0 || str === '2' || str === '0')) return 'truck'
+  if ((ctx.includes('motorcycle') || ctx.includes('moto') || ctx.includes('bike')) && (!isNaN(num) || str === 'bike')) return 'motorcycle'
+  if (ctx.includes('cell') && !isNaN(num)) return 'cell-phone'
+
+  if (str.includes('cell') || str.includes('phone') || str.includes('celular')) return 'cell-phone'
+  if (str.includes('truck') || str.includes('caminh') || str.includes('lorry') || str.includes('pickup') || num === 7) return 'truck'
+  if (str.includes('bus') || str.includes('onibus') || str.includes('ônibus') || num === 5) return 'bus'
+  if (str.includes('bike') || str.includes('moto') || str.includes('cycle') || str.includes('scooter') || num === 3) return 'motorcycle'
+  if (str.includes('person') || str.includes('pedestrian') || str.includes('pessoa') || str.includes('people') || num === 0) return 'person'
+  if (str.includes('bicycle') || str.includes('bicicleta') || str.includes('ciclista') || num === 1) return 'bicycle'
+  if (str.includes('car') || str.includes('van') || str.includes('auto') || str.includes('carro') || str.includes('sedan') || str.includes('suv') || num === 2) return 'car'
   return str || 'object'
 }
+
