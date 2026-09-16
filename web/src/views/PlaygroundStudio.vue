@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import PlaygroundViewport from '../components/playground/PlaygroundViewport.vue'
 import PlaygroundUnifiedPanel from '../components/playground/PlaygroundUnifiedPanel.vue'
+import PlaygroundDetectionInspector from '../components/playground/PlaygroundDetectionInspector.vue'
 import PlaygroundDetectionFeed from '../components/playground/PlaygroundDetectionFeed.vue'
 import PlaygroundMediaModal from '../components/playground/PlaygroundMediaModal.vue'
 import { useWebcamStream } from '../components/playground/useWebcamStream'
@@ -125,6 +126,14 @@ const handleInference = async () => {
           @update:isContinuous="(v) => isContinuous = v"
           @runInference="async () => { isScanning = true; await handleInference(); isScanning = false; }"
           @openMediaModal="showMediaModal = true"
+        />
+      </div>
+
+      <!-- RIGHT COLUMN: REALTIME DETECTION INSPECTOR (OPENS BESIDE TUNING ON CLICK) -->
+      <div v-if="selectedEntity" class="playground-inspector-col">
+        <PlaygroundDetectionInspector
+          :entity="selectedEntity"
+          @close="selectedEntity = null"
         />
       </div>
     </div>

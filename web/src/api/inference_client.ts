@@ -20,6 +20,9 @@ export async function runRealInferenceAPI(config: Record<string, any>, imageBase
       image_base64: imageBase64,
       conf: config.conf || 0.25,
       iou: config.iou || 0.45,
+      sahi: !!config.sahi,
+      nms_free: !!config.nmsFree,
+      track: true,
       device: '0'
     }
 

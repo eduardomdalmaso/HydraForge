@@ -27,6 +27,9 @@ export function usePlaygroundStream(
             image_base64: b64,
             conf: config.value.conf || 0.25,
             iou: config.value.iou || 0.45,
+            sahi: !!config.value.sahi,
+            nms_free: !!config.value.nmsFree,
+            track: true,
             device: '0'
           })
         })
@@ -69,7 +72,15 @@ export function usePlaygroundStream(
       runVideoFrameLoop(currentRunId)
     } else {
       imageSrc.value = `/api/v1/hydrastream/api/v1/streams/${config.value.source}/mjpeg?t=${Date.now()}`
-      eventSource = new EventSource(`/api/v1/inference/live?model=${encodeURIComponent(config.value.model)}&source=${encodeURIComponent(config.value.source)}&conf=${config.value.conf}`)
+      const sParams = new URLSearchParams({
+        model: config.value.model || 'yolo26n',
+        source: config.value.source || 'cam_entrance_01',
+        conf: String(config.value.conf || 0.25),
+        iou: String(config.value.iou || 0.45),
+        sahi: config.value.sahi ? 'true' : 'false',
+        nms_free: config.value.nmsFree ? 'true' : 'false'
+      })
+      eventSource = new EventSource(`/api/v1/inference/live?${sParams.toString()}`)
       eventSource.onmessage = (e) => {
         try {
           const d = JSON.parse(e.data)
@@ -80,7 +91,15 @@ export function usePlaygroundStream(
     }
   }
 
-  watch(() => [isContinuous.value, config.value.source, config.value.model, config.value.conf, config.value.iou], () => {
+  watch(() => [
+    isContinuous.value,
+    config.value.source,
+    config.value.model,
+    config.value.conf,
+    config.value.iou,
+    config.value.sahi,
+    config.value.nmsFree
+  ], () => {
     startLiveStream()
   })
 

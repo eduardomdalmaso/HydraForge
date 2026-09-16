@@ -15,8 +15,8 @@ export function usePlaygroundInit(config: Ref<any>) {
     ])
     if (models?.length) {
       modelsList.value = models
-      const b = models.find((m: any) => m.isCustom) || models[0]
-      config.value.model = b.id
+      const defaultModel = models.find((m: any) => m.id === 'yolo26n' || m.id === 'yolo26n.pt') || models[0]
+      config.value.model = defaultModel.id
     }
     if (streams?.length) hydraStreams.value = streams
     if (stats) hydraTelemetry.value = stats

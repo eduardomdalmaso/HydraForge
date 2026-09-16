@@ -44,15 +44,21 @@ def main():
     parser.add_argument("--weights", type=str, required=True)
     parser.add_argument("--source", type=str, required=True)
     parser.add_argument("--conf", type=float, default=0.25)
+    parser.add_argument("--iou", type=float, default=0.45)
     parser.add_argument("--device", type=str, default="0")
+    parser.add_argument("--sahi", action="store_true")
+    parser.add_argument("--nms-free", action="store_true")
     args = parser.parse_args()
 
     weights_path = resolve_weights(args.weights)
     from ultralytics import YOLO
     import torch
+    import cv2
+    from sahi_engine import run_sahi_inference
 
     model = YOLO(weights_path)
     device = 0 if (torch.cuda.is_available() and args.device != "cpu") else "cpu"
+    effective_iou = 1.0 if args.nms_free else args.iou
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     home_dir = os.path.expanduser("~")
@@ -88,46 +94,70 @@ def main():
                     continue
 
             t0 = time.perf_counter()
-            results = model.track(source=source_path, conf=args.conf, device=device, persist=True, tracker="bytetrack.yaml", verbose=False)
-            inf_ms = (time.perf_counter() - t0) * 1000.0
+            if args.sahi:
+                img = cv2.imread(source_path)
+                if img is not None:
+                    detections = run_sahi_inference(
+                        model=model,
+                        img=img,
+                        conf=args.conf,
+                        iou=effective_iou,
+                        device=device,
+                        imgsz=640,
+                        nms_free=args.nms_free
+                    )
+                else:
+                    detections = []
+                inf_ms = (time.perf_counter() - t0) * 1000.0
+            else:
+                results = model.track(
+                    source=source_path,
+                    conf=args.conf,
+                    iou=effective_iou,
+                    device=device,
+                    persist=True,
+                    tracker="bytetrack.yaml",
+                    verbose=False
+                )
+                inf_ms = (time.perf_counter() - t0) * 1000.0
 
-            detections = []
-            if len(results) > 0:
-                res = results[0]
-                for idx, box in enumerate(res.boxes):
-                    cls_id = int(box.cls[0].item())
-                    cls_name = res.names.get(cls_id, f"class_{cls_id}")
-                    conf = float(box.conf[0].item())
-                    xywhn = box.xywhn[0].tolist()
+                detections = []
+                if len(results) > 0:
+                    res = results[0]
+                    for idx, box in enumerate(res.boxes):
+                        cls_id = int(box.cls[0].item())
+                        cls_name = res.names.get(cls_id, f"class_{cls_id}")
+                        conf = float(box.conf[0].item())
+                        xywhn = box.xywhn[0].tolist()
 
-                    track_id = None
-                    if box.id is not None:
-                        track_id = int(box.id[0].item())
+                        track_id = None
+                        if box.id is not None:
+                            track_id = int(box.id[0].item())
 
-                    left_pct = max(0.0, min(100.0, (xywhn[0] - xywhn[2] / 2.0) * 100.0))
-                    top_pct = max(0.0, min(100.0, (xywhn[1] - xywhn[3] / 2.0) * 100.0))
-                    w_pct = max(1.0, min(100.0, xywhn[2] * 100.0))
-                    h_pct = max(1.0, min(100.0, xywhn[3] * 100.0))
+                        left_pct = max(0.0, min(100.0, (xywhn[0] - xywhn[2] / 2.0) * 100.0))
+                        top_pct = max(0.0, min(100.0, (xywhn[1] - xywhn[3] / 2.0) * 100.0))
+                        w_pct = max(1.0, min(100.0, xywhn[2] * 100.0))
+                        h_pct = max(1.0, min(100.0, xywhn[3] * 100.0))
 
-                    color = "#00f0ff"
-                    if any(k in cls_name.lower() for k in ["bus", "onibus", "caminhao", "truck"]):
-                        color = "#fcee0a"
-                    elif any(k in cls_name.lower() for k in ["person", "moto"]):
-                        color = "#00ff9d"
-                    elif "phone" in cls_name.lower():
-                        color = "#ff0055"
+                        color = "#00f0ff"
+                        if any(k in cls_name.lower() for k in ["bus", "onibus", "caminhao", "truck"]):
+                            color = "#fcee0a"
+                        elif any(k in cls_name.lower() for k in ["person", "moto"]):
+                            color = "#00ff9d"
+                        elif "phone" in cls_name.lower():
+                            color = "#ff0055"
 
-                    det_id = track_id if track_id is not None else (idx + 1)
-                    detections.append({
-                        "id": det_id,
-                        "track_id": track_id,
-                        "label": cls_name,
-                        "class_name": cls_name,
-                        "conf": round(conf, 3),
-                        "confidence": round(conf, 3),
-                        "box": [round(left_pct, 2), round(top_pct, 2), round(w_pct, 2), round(h_pct, 2)],
-                        "color": color
-                    })
+                        det_id = track_id if track_id is not None else (idx + 1)
+                        detections.append({
+                            "id": det_id,
+                            "track_id": track_id,
+                            "label": cls_name,
+                            "class_name": cls_name,
+                            "conf": round(conf, 3),
+                            "confidence": round(conf, 3),
+                            "box": [round(left_pct, 2), round(top_pct, 2), round(w_pct, 2), round(h_pct, 2)],
+                            "color": color
+                        })
 
             vram_mb = round(torch.cuda.memory_allocated(0) / (1024 * 1024), 1) if torch.cuda.is_available() else 0
             fps = round(1000.0 / inf_ms, 0) if inf_ms > 0 else 0

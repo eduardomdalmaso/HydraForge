@@ -27,6 +27,9 @@ type InferenceRequest struct {
 	Conf        float64 `json:"conf"`
 	IoU         float64 `json:"iou"`
 	Device      string  `json:"device"`
+	Sahi        bool    `json:"sahi,omitempty"`
+	NmsFree     bool    `json:"nms_free,omitempty"`
+	Track       bool    `json:"track,omitempty"`
 }
 
 // HandleInferencePredict executes real YOLO model inference on NVIDIA GPU via Python Worker.
@@ -42,11 +45,14 @@ func HandleInferencePredict(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req := InferenceRequest{
-		Model:  "yolo26n",
-		Source: "cam_entrance_01",
-		Conf:   0.25,
-		IoU:    0.45,
-		Device: "0",
+		Model:   "yolo26n",
+		Source:  "cam_entrance_01",
+		Conf:    0.25,
+		IoU:     0.45,
+		Device:  "0",
+		Track:   true,
+		Sahi:    false,
+		NmsFree: false,
 	}
 
 	if r.Method == http.MethodPost {
@@ -64,6 +70,12 @@ func HandleInferencePredict(w http.ResponseWriter, r *http.Request) {
 		}
 		if i, err := strconv.ParseFloat(q.Get("iou"), 64); err == nil && i > 0 {
 			req.IoU = i
+		}
+		if q.Get("sahi") == "true" {
+			req.Sahi = true
+		}
+		if q.Get("nms_free") == "true" {
+			req.NmsFree = true
 		}
 	}
 
@@ -103,14 +115,25 @@ func HandleInferencePredict(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, pythonBin, scriptPath,
+	args := []string{
+		scriptPath,
 		"--weights", modelFile,
 		"--source", req.Source,
 		"--conf", fmt.Sprintf("%.2f", req.Conf),
 		"--iou", fmt.Sprintf("%.2f", req.IoU),
 		"--device", req.Device,
-		"--track",
-	)
+	}
+	if req.Track && !req.Sahi {
+		args = append(args, "--track")
+	}
+	if req.Sahi {
+		args = append(args, "--sahi")
+	}
+	if req.NmsFree {
+		args = append(args, "--nms-free")
+	}
+
+	cmd := exec.CommandContext(ctx, pythonBin, args...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -177,6 +200,10 @@ func HandleInferenceLiveStream(w http.ResponseWriter, r *http.Request) {
 	if conf == "" {
 		conf = "0.25"
 	}
+	iou := q.Get("iou")
+	if iou == "" {
+		iou = "0.45"
+	}
 
 	modelFile := resolveModelWeights(model)
 	pythonBin := config.GetPythonBin()
@@ -191,12 +218,22 @@ func HandleInferenceLiveStream(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	cmd := exec.CommandContext(r.Context(), pythonBin, "worker_python/live_engine.py",
+	cmdArgs := []string{
+		"worker_python/live_engine.py",
 		"--weights", modelFile,
 		"--source", sourcePath,
 		"--conf", conf,
+		"--iou", iou,
 		"--device", "0",
-	)
+	}
+	if q.Get("sahi") == "true" {
+		cmdArgs = append(cmdArgs, "--sahi")
+	}
+	if q.Get("nms_free") == "true" {
+		cmdArgs = append(cmdArgs, "--nms-free")
+	}
+
+	cmd := exec.CommandContext(r.Context(), pythonBin, cmdArgs...)
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {

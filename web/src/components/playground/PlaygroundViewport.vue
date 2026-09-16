@@ -107,6 +107,8 @@ const onImageLoaded = (e: Event) => {
           muted
           class="viewport-media"
           @loadedmetadata="onVideoMetadata"
+          @loadeddata="onVideoMetadata"
+          @play="onVideoMetadata"
           @ended="handleVideoEnded"
         />
         <img v-else id="hud-viewport-image" :src="imageSrc" alt="Tracking Feed" class="viewport-media" @load="onImageLoaded" @error="imgError = true" />

@@ -2,6 +2,7 @@ import { ref } from 'vue'
 
 export interface DetectionEvent {
   id: string
+  track_id?: number | string | null
   label: string
   conf: number
   box: [number, number, number, number]
@@ -76,6 +77,7 @@ export function useDetectionHistory() {
       const thumb = cropThumbnail(sourceEl, d.box || [10, 10, 30, 30], d.label || 'target')
       return {
         id: evtId,
+        track_id: d.track_id || null,
         label: (d.label || 'object').toUpperCase(),
         conf: d.conf || 0.85,
         box: d.box || [10, 10, 30, 30],

@@ -68,12 +68,6 @@ func GetPythonBin() string {
 			return env
 		}
 	}
-	if conda := os.Getenv("CONDA_PREFIX"); conda != "" {
-		p := filepath.Join(conda, "bin", "python")
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
-	}
 	home := GetHomeDir()
 	candidates := []string{
 		filepath.Join(home, "miniconda3/envs/analytics-env/bin/python"),
@@ -84,6 +78,12 @@ func GetPythonBin() string {
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
 			return c
+		}
+	}
+	if conda := os.Getenv("CONDA_PREFIX"); conda != "" {
+		p := filepath.Join(conda, "bin", "python")
+		if _, err := os.Stat(p); err == nil {
+			return p
 		}
 	}
 	if p, err := exec.LookPath("python3"); err == nil {

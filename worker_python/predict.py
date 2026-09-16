@@ -97,6 +97,8 @@ def parse_args():
     parser.add_argument("--device", type=str, default="0", help="CUDA device index or cpu")
     parser.add_argument("--imgsz", type=int, default=640, help="Inference image resolution")
     parser.add_argument("--track", action="store_true", help="Enable ByteTrack object tracking")
+    parser.add_argument("--sahi", action="store_true", help="Enable SAHI 4K sliced inference")
+    parser.add_argument("--nms-free", action="store_true", help="Enable NMS-free end-to-end decode")
     return parser.parse_args()
 
 def main():
@@ -110,77 +112,98 @@ def main():
 
     from ultralytics import YOLO
     import torch
+    import cv2
+    from sahi_engine import run_sahi_inference
 
     try:
         model = YOLO(weights_path)
         device = 0 if (torch.cuda.is_available() and args.device != "cpu") else "cpu"
 
         t_start = time.perf_counter()
-        if args.track:
-            results = model.track(
-                source=source_path,
-                conf=args.conf,
-                iou=args.iou,
-                device=device,
-                imgsz=args.imgsz,
-                persist=True,
-                tracker="bytetrack.yaml",
-                verbose=False
-            )
+        effective_iou = 1.0 if args.nms_free else args.iou
+
+        if args.sahi:
+            img = cv2.imread(source_path)
+            if img is not None:
+                detections = run_sahi_inference(
+                    model=model,
+                    img=img,
+                    conf=args.conf,
+                    iou=effective_iou,
+                    device=device,
+                    imgsz=args.imgsz,
+                    nms_free=args.nms_free
+                )
+            else:
+                detections = []
+            t_total_ms = (time.perf_counter() - t_start) * 1000.0
+            speed = {"preprocess": 1.0, "inference": round(t_total_ms, 2), "postprocess": 1.0}
         else:
-            results = model.predict(
-                source=source_path,
-                conf=args.conf,
-                iou=args.iou,
-                device=device,
-                imgsz=args.imgsz,
-                verbose=False
-            )
-        t_total_ms = (time.perf_counter() - t_start) * 1000.0
+            if args.track:
+                results = model.track(
+                    source=source_path,
+                    conf=args.conf,
+                    iou=effective_iou,
+                    device=device,
+                    imgsz=args.imgsz,
+                    persist=True,
+                    tracker="bytetrack.yaml",
+                    verbose=False
+                )
+            else:
+                results = model.predict(
+                    source=source_path,
+                    conf=args.conf,
+                    iou=effective_iou,
+                    device=device,
+                    imgsz=args.imgsz,
+                    verbose=False
+                )
+            t_total_ms = (time.perf_counter() - t_start) * 1000.0
 
-        detections = []
-        speed = {"preprocess": 0.0, "inference": 0.0, "postprocess": 0.0}
+            detections = []
+            speed = {"preprocess": 0.0, "inference": 0.0, "postprocess": 0.0}
 
-        if len(results) > 0:
-            res = results[0]
-            if hasattr(res, "speed"):
-                speed = res.speed
+            if len(results) > 0:
+                res = results[0]
+                if hasattr(res, "speed"):
+                    speed = res.speed
 
-            boxes = res.boxes
-            for idx, box in enumerate(boxes):
-                cls_id = int(box.cls[0].item())
-                cls_name = res.names.get(cls_id, f"class_{cls_id}")
-                conf = float(box.conf[0].item())
-                xywhn = box.xywhn[0].tolist()
+                boxes = res.boxes
+                for idx, box in enumerate(boxes):
+                    cls_id = int(box.cls[0].item())
+                    cls_name = res.names.get(cls_id, f"class_{cls_id}")
+                    conf = float(box.conf[0].item())
+                    xywhn = box.xywhn[0].tolist()
 
-                track_id = None
-                if box.id is not None:
-                    track_id = int(box.id[0].item())
+                    track_id = None
+                    if box.id is not None:
+                        track_id = int(box.id[0].item())
 
-                left_pct = max(0.0, min(100.0, (xywhn[0] - xywhn[2] / 2.0) * 100.0))
-                top_pct = max(0.0, min(100.0, (xywhn[1] - xywhn[3] / 2.0) * 100.0))
-                w_pct = max(1.0, min(100.0, xywhn[2] * 100.0))
-                h_pct = max(1.0, min(100.0, xywhn[3] * 100.0))
+                    left_pct = max(0.0, min(100.0, (xywhn[0] - xywhn[2] / 2.0) * 100.0))
+                    top_pct = max(0.0, min(100.0, (xywhn[1] - xywhn[3] / 2.0) * 100.0))
+                    w_pct = max(1.0, min(100.0, xywhn[2] * 100.0))
+                    h_pct = max(1.0, min(100.0, xywhn[3] * 100.0))
 
-                color = "#00f0ff"
-                if any(k in cls_name.lower() for k in ["bus", "onibus", "caminhao", "truck"]):
-                    color = "#fcee0a"
-                elif any(k in cls_name.lower() for k in ["person", "moto"]):
-                    color = "#00ff9d"
-                elif "phone" in cls_name.lower():
-                    color = "#ff0055"
+                    color = "#00f0ff"
+                    if any(k in cls_name.lower() for k in ["bus", "onibus", "caminhao", "truck"]):
+                        color = "#fcee0a"
+                    elif any(k in cls_name.lower() for k in ["person", "moto"]):
+                        color = "#00ff9d"
+                    elif "phone" in cls_name.lower():
+                        color = "#ff0055"
 
-                det_id = track_id if track_id is not None else (idx + 1)
-                detections.append({
-                    "id": det_id,
-                    "track_id": track_id,
-                    "label": cls_name,
-                    "class_name": cls_name,
-                    "conf": round(conf, 3),
-                    "confidence": round(conf, 3),
-                    "box": [round(left_pct, 2), round(top_pct, 2), round(w_pct, 2), round(h_pct, 2)],
-                    "color": color
-                })
+                    det_id = track_id if track_id is not None else (idx + 1)
+                    detections.append({
+                        "id": det_id,
+                        "track_id": track_id,
+                        "label": cls_name,
+                        "class_name": cls_name,
+                        "conf": round(conf, 3),
+                        "confidence": round(conf, 3),
+                        "box": [round(left_pct, 2), round(top_pct, 2), round(w_pct, 2), round(h_pct, 2)],
+                        "color": color
+                    })
 
         inf_ms = speed.get("inference", t_total_ms)
         fps = round(1000.0 / inf_ms, 1) if inf_ms > 0 else 0

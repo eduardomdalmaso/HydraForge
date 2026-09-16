@@ -16,39 +16,6 @@ const emit = defineEmits<{
 const exportedMsg = ref<string | null>(null)
 const isSyncingAll = ref(false)
 
-const handleExportPng = (e: MouseEvent, evt: DetectionEvent) => {
-  e.stopPropagation()
-  if (evt.thumbnailUrl) {
-    const a = document.createElement('a')
-    a.href = evt.thumbnailUrl
-    a.download = `detection_${evt.label.toLowerCase()}_${Date.now()}.jpg`
-    a.click()
-  }
-  exportedMsg.value = `EXPORTED // ${evt.label} #${evt.id}`
-  setTimeout(() => exportedMsg.value = null, 2500)
-}
-
-const handleSendToVault = async (e: MouseEvent, evt: DetectionEvent) => {
-  e.stopPropagation()
-  if (!evt.thumbnailUrl) return
-  evt.vaultStatus = 'sending'
-  const datasetTag = evt.sourceCategory && evt.sourceCategory !== 'root' ? evt.sourceCategory : 'playground_curation'
-  const cameraTag = evt.sourceFile ? `video_${evt.sourceCategory}_${evt.sourceFile}` : 'video_loop'
-
-  const res = await sendToHydraVaultInbox(datasetTag, cameraTag, evt.thumbnailUrl, [
-    { label: evt.label, confidence: evt.conf, box: evt.box }
-  ])
-
-  if (res.success) {
-    evt.vaultStatus = 'synced'
-    exportedMsg.value = `[HYDRAVAULT :8082] ENVIADO // DATASET: ${datasetTag.toUpperCase()}`
-  } else {
-    evt.vaultStatus = 'error'
-    exportedMsg.value = `[HYDRAVAULT] ${res.message}`
-  }
-  setTimeout(() => exportedMsg.value = null, 3500)
-}
-
 const handleSyncAll = async () => {
   if (props.events.length === 0) return
   isSyncingAll.value = true
@@ -99,13 +66,13 @@ const handleSyncAll = async () => {
       {{ exportedMsg }}
     </div>
 
-    <div class="feed-list-scroll">
+    <div class="feed-photo-grid">
       <div v-if="events.length === 0" class="feed-empty-state">
         <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #64748b; margin-bottom: 0.25rem;">
           // NENHUMA DETECCAO NO BUFFER
         </div>
         <div style="font-size: 0.68rem; color: #475569;">
-          Dispare um Scan ou ative o Live Scan para registrar alvos em tempo real.
+          Dispare um Scan ou ative o Live Scan para registrar fotos de alvos em tempo real.
         </div>
       </div>
 
@@ -113,44 +80,26 @@ const handleSyncAll = async () => {
         v-for="evt in events"
         v-else
         :key="evt.id"
-        class="feed-item"
+        class="feed-photo-card"
         :class="{ active: selectedEntity?.id === evt.id }"
+        :title="`Clique para inspecionar ${evt.label} (${(evt.conf * 100).toFixed(0)}%)`"
         @click="emit('selectEntity', evt)"
       >
-        <div class="feed-thumbnail-wrapper">
-          <img v-if="evt.thumbnailUrl" :src="evt.thumbnailUrl" :alt="evt.label" class="feed-thumbnail-img" />
-          <div v-else class="feed-thumbnail-fallback">{{ evt.label.slice(0, 3) }}</div>
-        </div>
+        <div class="photo-card-wrapper">
+          <img v-if="evt.thumbnailUrl" :src="evt.thumbnailUrl" :alt="evt.label" class="photo-card-img" />
+          <div v-else class="photo-card-fallback">{{ evt.label.slice(0, 4) }}</div>
+          
+          <!-- TOP CONFIDENCE BADGE -->
+          <div class="photo-card-badge">{{ (evt.conf * 100).toFixed(0) }}%</div>
 
-        <div class="feed-info-col">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 0.4rem;">
-              <span class="feed-entity-label">{{ evt.label }}</span>
-              <span v-if="evt.sourceCategory" class="file-tag" style="font-size: 0.58rem;">
-                [{{ evt.sourceCategory.toUpperCase() }}]
-              </span>
-            </div>
-            <span class="feed-conf-tag">{{ (evt.conf * 100).toFixed(0) }}%</span>
+          <!-- BOTTOM LABEL OVERLAY -->
+          <div class="photo-card-footer">
+            <span class="photo-card-label">{{ evt.label }}</span>
+            <span v-if="evt.track_id" class="photo-card-track">#{{ evt.track_id }}</span>
           </div>
 
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 2px;">
-            <span class="feed-timestamp">{{ evt.timestamp }}</span>
-            <div style="display: flex; gap: 0.25rem; align-items: center;">
-              <button class="cyber-pill feed-btn" title="Baixar PNG" @click="(e) => handleExportPng(e, evt)">[PNG]</button>
-              <button
-                class="cyber-pill feed-btn"
-                :style="{
-                  color: evt.vaultStatus === 'synced' ? 'var(--cb-green)' : 'var(--cb-yellow)',
-                  borderColor: evt.vaultStatus === 'synced' ? 'rgba(0,255,157,0.5)' : 'rgba(252,238,10,0.4)'
-                }"
-                :title="evt.vaultStatus === 'synced' ? 'Já enviado ao HydraVault' : 'Enviar snapshot para curadoria no HydraVault (:8082)'"
-                :disabled="evt.vaultStatus === 'sending' || evt.vaultStatus === 'synced'"
-                @click="(e) => handleSendToVault(e, evt)"
-              >
-                {{ evt.vaultStatus === 'synced' ? '[VAULT: OK]' : (evt.vaultStatus === 'sending' ? '[...]' : '[+ VAULT]') }}
-              </button>
-            </div>
-          </div>
+          <!-- SELECTION RETICLE -->
+          <div v-if="selectedEntity?.id === evt.id" class="photo-card-reticle"></div>
         </div>
       </div>
     </div>
