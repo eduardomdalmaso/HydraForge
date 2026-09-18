@@ -7,31 +7,20 @@ const HYDRASTREAM_BASE = '/api/v1/hydrastream'
 export async function fetchHydraStreams(): Promise<any[]> {
   try {
     const res = await fetch(`${HYDRASTREAM_BASE}/api/v1/streams`)
-    if (!res.ok) throw new Error(`HTTP error ${res.status}`)
+    if (!res.ok) return []
     const data = await res.json()
     return (data && Array.isArray(data.streams)) ? data.streams : []
   } catch {
-    try {
-      const fallback = await fetch('http://localhost:8080/api/v1/streams')
-      if (!fallback.ok) return []
-      const data = await fallback.json()
-      return (data && Array.isArray(data.streams)) ? data.streams : []
-    } catch {
-      return []
-    }
+    return []
   }
 }
 
 export async function fetchHydraTelemetry(): Promise<any | null> {
   try {
     const res = await fetch(`${HYDRASTREAM_BASE}/api/v1/telemetry/stats`)
-    if (!res.ok) throw new Error(`HTTP error ${res.status}`)
+    if (!res.ok) return null
     return await res.json()
   } catch {
-    try {
-      const fallback = await fetch('http://localhost:8080/api/v1/telemetry/stats')
-      if (fallback.ok) return await fallback.json()
-    } catch {}
     return null
   }
 }
