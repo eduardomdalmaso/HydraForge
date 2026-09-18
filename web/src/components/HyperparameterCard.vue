@@ -47,7 +47,7 @@ const updateField = <K extends keyof TrainingParams>(field: K, val: TrainingPara
       </div>
     </div>
 
-    <div class="selector-group" style="margin-bottom: 0;">
+    <div class="selector-group">
       <div class="selector-label">OTIMIZADOR & EARLY STOPPING</div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
         <div>
@@ -68,6 +68,15 @@ const updateField = <K extends keyof TrainingParams>(field: K, val: TrainingPara
           </select>
         </div>
       </div>
+    </div>
+
+    <div class="selector-group" style="margin-bottom: 0;">
+      <div class="selector-label">FOCAL LOSS (DESBALANCEAMENTO)</div>
+      <select class="cyber-select" :value="params.fl_gamma || 0" @change="(e) => updateField('fl_gamma', parseFloat((e.target as HTMLSelectElement).value))">
+        <option value="0">[OFF] Desativado (Padrao)</option>
+        <option value="1.5">[FOCAL: 1.5] Balanceado (Classes Raras // Recomendado)</option>
+        <option value="2.0">[FOCAL: 2.0] Agressivo (Alto Desbalanceamento)</option>
+      </select>
     </div>
   </div>
 </template>

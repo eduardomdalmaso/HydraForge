@@ -96,6 +96,12 @@ func (w *PythonWorker) StartTraining(ctx context.Context, job *domain.TrainingJo
 	if job.Hyperparameters.Patience > 0 {
 		args = append(args, "--patience", strconv.Itoa(job.Hyperparameters.Patience))
 	}
+	if job.Hyperparameters.FLGamma > 0 {
+		args = append(args, "--fl-gamma", fmt.Sprintf("%.2f", job.Hyperparameters.FLGamma))
+	}
+	if job.Hyperparameters.Freeze > 0 {
+		args = append(args, "--freeze", strconv.Itoa(job.Hyperparameters.Freeze))
+	}
 	if job.Hyperparameters.UseAMP {
 		args = append(args, "--amp")
 	}

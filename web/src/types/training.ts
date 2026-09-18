@@ -12,6 +12,13 @@ export interface TrainingParams {
   lr0: number
   patience: number
   close_mosaic: number
+  fl_gamma?: number
+  freeze?: number
+  two_stage?: boolean
+  stage1_epochs?: number
+  stage1_freeze?: number
+  stage2_epochs?: number
+  recipe_preset?: string
 }
 
 export interface TrainingMetricPayload {

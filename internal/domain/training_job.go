@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -52,8 +53,27 @@ type Hyperparameters struct {
 	Stage1Freeze  int     `json:"stage1_freeze"` // Stage 1 Freeze depth (10=Backbone, 23=Head-Only)
 	Stage2Epochs  int     `json:"stage2_epochs"` // Stage 2 Full Model Refinement Epochs
 	CloseMosaic   int     `json:"close_mosaic"`  // Disable mosaic for final N epochs
+	FLGamma       float64 `json:"fl_gamma"`      // Focal Loss gamma for class imbalance compensation
 	RecipePreset  string  `json:"recipe_preset"` // "default", "yolo26_recipe", "small_dataset", "two_stage"
 	Pretrained    bool    `json:"pretrained"`    // Start from pretrained weights (.pt)
+}
+
+// UnmarshalJSON enables decoding from both 'batch' and 'batch_size' JSON keys.
+func (h *Hyperparameters) UnmarshalJSON(data []byte) error {
+	type Alias Hyperparameters
+	aux := struct {
+		Batch *int `json:"batch"`
+		*Alias
+	}{
+		Alias: (*Alias)(h),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if aux.Batch != nil && h.BatchSize == 0 {
+		h.BatchSize = *aux.Batch
+	}
+	return nil
 }
 
 // TrainingMetrics represents epoch-level metrics emitted by PyTorch.

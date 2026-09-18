@@ -39,6 +39,8 @@ def main():
     parser.add_argument('--lr0', type=float, default=0.001)
     parser.add_argument('--close-mosaic', type=int, default=10)
     parser.add_argument('--patience', type=int, default=50)
+    parser.add_argument('--fl-gamma', type=float, default=0.0, help='Focal Loss gamma parameter for class imbalance')
+    parser.add_argument('--freeze', type=int, default=0, help='Freeze first N layers of backbone')
     parser.add_argument('--job-id', type=str, default='run_1')
     args = parser.parse_args()
 
@@ -285,26 +287,32 @@ def main():
     }
     print(f"HYDRA_MEMORY_PLAN:{json.dumps(mem_payload)}", flush=True)
 
-    results = model.train(
-        data=args.data,
-        epochs=args.epochs,
-        batch=mem_plan.batch_size,
-        imgsz=args.imgsz,
-        device=args.device,
-        optimizer=args.optimizer,
-        amp=args.amp,
-        workers=mem_plan.num_workers,
-        cache=mem_plan.cache,
-        compile=args.compile,
-        plots=False,
-        lr0=args.lr0,
-        close_mosaic=args.close_mosaic,
-        patience=args.patience,
-        project=project_dir,
-        name=args.job_id,
-        exist_ok=True,
-        verbose=False
-    )
+    train_kwargs = {
+        "data": args.data,
+        "epochs": args.epochs,
+        "batch": mem_plan.batch_size,
+        "imgsz": args.imgsz,
+        "device": args.device,
+        "optimizer": args.optimizer,
+        "amp": args.amp,
+        "workers": mem_plan.num_workers,
+        "cache": mem_plan.cache,
+        "compile": args.compile,
+        "plots": False,
+        "lr0": args.lr0,
+        "close_mosaic": args.close_mosaic,
+        "patience": args.patience,
+        "project": project_dir,
+        "name": args.job_id,
+        "exist_ok": True,
+        "verbose": False
+    }
+    if args.fl_gamma > 0.0:
+        train_kwargs["cls"] = max(0.5, args.fl_gamma)
+    if args.freeze > 0:
+        train_kwargs["freeze"] = args.freeze
+
+    results = model.train(**train_kwargs)
     print("HYDRA_TRAINING_COMPLETE", flush=True)
 
 if __name__ == '__main__':

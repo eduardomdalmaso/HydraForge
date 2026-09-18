@@ -18,7 +18,7 @@ const isLaunching = ref(false)
 const errorMsg = ref('')
 const params = ref({
   epochs: 50, batch: 16, imgsz: 640, optimizer: 'AdamW', lr0: 0.001, amp: true,
-  workers: 8, patience: 20, close_mosaic: 10, two_stage: false,
+  workers: 8, patience: 20, close_mosaic: 10, fl_gamma: 0, two_stage: false,
   stage1_epochs: 20, stage1_freeze: 10, stage2_epochs: 30
 })
 
@@ -38,7 +38,10 @@ const handleLaunch = async () => {
       model_architecture: modelArch,
       task: task.value,
       dataset_id: selectedDataset.value,
-      hyperparameters: params.value
+      hyperparameters: {
+        ...params.value,
+        batch_size: params.value.batch
+      }
     })
     emit('jobLaunched', result)
     if (typeof window !== 'undefined') window.location.hash = 'live-hud'
