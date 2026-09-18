@@ -16,7 +16,7 @@ export interface DetectionEvent {
 
 export function useDetectionHistory() {
   const history = ref<DetectionEvent[]>([])
-  const maxEvents = 30
+  const maxEvents = 100
 
   const cropThumbnail = (
     sourceEl: HTMLImageElement | HTMLVideoElement | null,

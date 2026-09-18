@@ -90,9 +90,31 @@ export async function sendToHydraVaultInbox(
   bboxes: any[] = []
 ): Promise<{ success: boolean; message: string }> {
   try {
-    // Convert dataURL to Blob
-    const res = await fetch(imageDataUrl)
-    const blob = await res.blob()
+    let blob: Blob
+    if (imageDataUrl && imageDataUrl.startsWith('data:')) {
+      const parts = imageDataUrl.split(',')
+      const mimeMatch = parts[0].match(/:(.*?);/)
+      const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg'
+      const byteStr = atob(parts[1])
+      const u8Arr = new Uint8Array(byteStr.length)
+      for (let i = 0; i < byteStr.length; i++) {
+        u8Arr[i] = byteStr.charCodeAt(i)
+      }
+      blob = new Blob([u8Arr], { type: mime })
+    } else if (imageDataUrl) {
+      const res = await fetch(imageDataUrl)
+      blob = await res.blob()
+    } else {
+      const canvas = document.createElement('canvas')
+      canvas.width = 320
+      canvas.height = 240
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.fillStyle = '#07080c'
+        ctx.fillRect(0, 0, 320, 240)
+      }
+      blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b || new Blob()), 'image/jpeg', 0.8))
+    }
 
     const form = new FormData()
     form.append('image', blob, `snap_${Date.now()}.jpg`)
@@ -102,8 +124,14 @@ export async function sendToHydraVaultInbox(
       form.append('bboxes', JSON.stringify(bboxes))
     }
 
-    const vaultRes = await fetch('http://localhost:8082/api/v1/inbox/upload', {
+    const host = typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'localhost'
+    const vaultUrl = `http://${host}:8082/api/v1/inbox/upload`
+
+    const vaultRes = await fetch(vaultUrl, {
       method: 'POST',
+      headers: {
+        'Authorization': 'Bearer hydravault_vault_token'
+      },
       body: form
     })
 
