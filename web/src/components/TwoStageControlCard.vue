@@ -6,23 +6,47 @@ const emit = defineEmits<{ (e: 'update:params', val: Record<string, any>): void 
 const isTwoStage = computed(() => !!props.params.two_stage)
 
 const handleToggle = () => {
+  const currentTotal = props.params.epochs || 50
+  const s1 = Math.max(5, Math.round(currentTotal * 0.3))
+  const s2 = Math.max(10, currentTotal - s1)
   emit('update:params', {
     ...props.params,
     two_stage: !props.params.two_stage,
-    stage1_epochs: props.params.stage1_epochs || 20,
+    stage1_epochs: s1,
     stage1_freeze: props.params.stage1_freeze || 10,
-    stage2_epochs: props.params.stage2_epochs || 30,
+    stage2_epochs: s2,
     close_mosaic: props.params.close_mosaic || 10
   })
 }
 
+const updateStage1 = (val: number) => {
+  const s2 = props.params.stage2_epochs || 30
+  emit('update:params', {
+    ...props.params,
+    stage1_epochs: val,
+    epochs: val + s2
+  })
+}
+
+const updateStage2 = (val: number) => {
+  const s1 = props.params.stage1_epochs || 20
+  emit('update:params', {
+    ...props.params,
+    stage2_epochs: val,
+    epochs: s1 + val
+  })
+}
+
 const applyPreset = (presetKey: string) => {
+  const currentEpochs = props.params.epochs || 50
   if (presetKey === 'yolo26') {
     emit('update:params', { ...props.params, recipe_preset: 'yolo26_recipe', close_mosaic: 10, optimizer: 'AdamW', lr0: 0.00038, two_stage: false })
   } else if (presetKey === 'small_data') {
-    emit('update:params', { ...props.params, recipe_preset: 'small_dataset', freeze: 10, patience: 20, epochs: 50, lr0: 0.001, two_stage: false })
+    emit('update:params', { ...props.params, recipe_preset: 'small_dataset', freeze: 10, patience: 20, lr0: 0.001, two_stage: false })
   } else if (presetKey === 'two_stage') {
-    emit('update:params', { ...props.params, recipe_preset: 'two_stage', two_stage: true, stage1_epochs: 20, stage1_freeze: 10, stage2_epochs: 30, close_mosaic: 10 })
+    const s1 = Math.max(5, Math.round(currentEpochs * 0.3))
+    const s2 = Math.max(10, currentEpochs - s1)
+    emit('update:params', { ...props.params, recipe_preset: 'two_stage', two_stage: true, stage1_epochs: s1, stage1_freeze: 10, stage2_epochs: s2, close_mosaic: 10 })
   } else {
     emit('update:params', { ...props.params, recipe_preset: 'default', two_stage: false, freeze: 0 })
   }
@@ -57,12 +81,12 @@ const applyPreset = (presetKey: string) => {
     <div v-if="isTwoStage" style="margin-top: 0.75rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; background: var(--vms-bg-elevated); padding: 0.75rem; border: 1px solid var(--vms-border); border-radius: var(--vms-radius-sm);">
       <div>
         <div class="selector-label" style="font-size: 0.75rem;"><span>ESTAGIO 1: HEAD ADAPT</span><span class="slider-val">{{ params.stage1_epochs || 20 }} ep</span></div>
-        <input type="range" min="5" max="50" :value="params.stage1_epochs || 20" style="width: 100%;" @input="(e) => emit('update:params', { ...params, stage1_epochs: parseInt((e.target as HTMLInputElement).value) })" />
+        <input type="range" min="5" max="100" :value="params.stage1_epochs || 20" style="width: 100%;" @input="(e) => updateStage1(parseInt((e.target as HTMLInputElement).value))" />
         <div style="margin-top: 0.2rem; font-size: 0.7rem; color: var(--vms-primary);">Freeze: <strong>Backbone (0-10)</strong></div>
       </div>
       <div>
         <div class="selector-label" style="font-size: 0.75rem;"><span>ESTAGIO 2: FULL REFINE</span><span class="slider-val">{{ params.stage2_epochs || 30 }} ep</span></div>
-        <input type="range" min="10" max="100" :value="params.stage2_epochs || 30" style="width: 100%;" @input="(e) => emit('update:params', { ...params, stage2_epochs: parseInt((e.target as HTMLInputElement).value) })" />
+        <input type="range" min="10" max="200" :value="params.stage2_epochs || 30" style="width: 100%;" @input="(e) => updateStage2(parseInt((e.target as HTMLInputElement).value))" />
         <div style="margin-top: 0.2rem; font-size: 0.7rem; color: var(--vms-success);">Unfreeze: <strong>All // lr0=0.001</strong></div>
       </div>
     </div>

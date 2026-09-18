@@ -6,6 +6,15 @@ const emit = defineEmits<{ (e: 'update:params', val: TrainingParams): void }>()
 const updateField = <K extends keyof TrainingParams>(field: K, val: TrainingParams[K]) => {
   emit('update:params', { ...props.params, [field]: val })
 }
+const updateEpochs = (val: number) => {
+  if (props.params.two_stage) {
+    const s1 = Math.max(5, Math.round(val * 0.3))
+    const s2 = Math.max(10, val - s1)
+    emit('update:params', { ...props.params, epochs: val, stage1_epochs: s1, stage2_epochs: s2 })
+  } else {
+    emit('update:params', { ...props.params, epochs: val })
+  }
+}
 </script>
 
 <template>
@@ -21,7 +30,7 @@ const updateField = <K extends keyof TrainingParams>(field: K, val: TrainingPara
         <span class="slider-val">{{ params.epochs }} EP (Patience: {{ params.patience || 20 }})</span>
       </div>
       <div class="slider-row">
-        <input type="range" min="5" max="300" :value="params.epochs" @input="(e) => updateField('epochs', parseInt((e.target as HTMLInputElement).value))" />
+        <input type="range" min="5" max="300" :value="params.epochs" @input="(e) => updateEpochs(parseInt((e.target as HTMLInputElement).value))" />
       </div>
     </div>
 
