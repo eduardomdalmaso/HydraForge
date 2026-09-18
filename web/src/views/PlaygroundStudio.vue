@@ -36,7 +36,7 @@ const showMediaModal = ref(false)
 
 const {
   isVaultOnline, vaultDatasets, selectedDatasetId, activeClasses,
-  maxPerClass, onlyHardCases, autoStreamToVault, collectedStats,
+  maxPerClass, onlyHardCases, hardCaseThreshold, autoStreamToVault, collectedStats,
   totalCollected, sentLogs, isSending, checkHealth, resetStats,
   processFrameDetections
 } = useVaultCollector()
@@ -147,6 +147,7 @@ const handleInference = async () => {
           :activeClasses="activeClasses"
           :maxPerClass="maxPerClass"
           :onlyHardCases="onlyHardCases"
+          :hardCaseThreshold="hardCaseThreshold"
           :autoStreamToVault="autoStreamToVault"
           :collectedStats="collectedStats"
           :totalCollected="totalCollected"
@@ -157,6 +158,7 @@ const handleInference = async () => {
           @toggleTargetClass="(cls) => activeClasses[cls] = activeClasses[cls] === false"
           @update:maxPerClass="(m) => maxPerClass = m"
           @update:onlyHardCases="(v) => onlyHardCases = v"
+          @update:hardCaseThreshold="(v) => hardCaseThreshold = v"
           @update:autoStreamToVault="(v) => autoStreamToVault = v"
           @resetCollectorStats="resetStats"
           @checkVaultHealth="checkHealth"

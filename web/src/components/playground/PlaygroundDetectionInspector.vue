@@ -43,6 +43,21 @@ const handleSendToVault = async () => {
   }
   setTimeout(() => statusMsg.value = null, 3500)
 }
+const formatBBox = (e: any): string => {
+  if (!e) return 'N/A'
+  const b = e.box || e.bbox
+  if (Array.isArray(b) && b.length >= 4) {
+    const x = b[0] > 1 ? b[0].toFixed(1) : (b[0] * 100).toFixed(1)
+    const y = b[1] > 1 ? b[1].toFixed(1) : (b[1] * 100).toFixed(1)
+    const w = b[2] > 1 ? b[2].toFixed(1) : (b[2] * 100).toFixed(1)
+    const h = b[3] > 1 ? b[3].toFixed(1) : (b[3] * 100).toFixed(1)
+    return `X: ${x}% | Y: ${y}% | W: ${w}% | H: ${h}%`
+  }
+  if (e.x_center !== undefined && e.width !== undefined) {
+    return `CX: ${(e.x_center * 100).toFixed(1)}% | CY: ${(e.y_center * 100).toFixed(1)}% | W: ${(e.width * 100).toFixed(1)}% | H: ${(e.height * 100).toFixed(1)}%`
+  }
+  return 'N/A'
+}
 </script>
 
 <template>
@@ -76,7 +91,7 @@ const handleSendToVault = async () => {
       <div class="meta-item" style="grid-column: 1 / -1;">
         <span class="meta-k">BOUNDING BOX:</span>
         <span class="meta-v text-mono" style="font-size: 0.68rem; color: var(--cb-cyan);">
-          {{ entity.box ? `X:${entity.box[0]}% Y:${entity.box[1]}% W:${entity.box[2]}% H:${entity.box[3]}%` : 'N/A' }}
+          {{ formatBBox(entity) }}
         </span>
       </div>
       <div v-if="entity.sourceCategory" class="meta-item" style="grid-column: 1 / -1;">

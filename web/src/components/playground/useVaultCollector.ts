@@ -2,12 +2,8 @@ import { ref, computed } from 'vue'
 import { checkVaultHealth, fetchVaultDatasets, sendDirectFrameToVault, type VaultHealth, type VaultDataset } from '../../api/vault_client'
 
 export interface SentFrameLog {
-  id: string
-  label: string
-  conf: number
-  timestamp: string
-  status: 'synced' | 'error'
-  thumbnailUrl?: string
+  id: string; label: string; conf: number; timestamp: string; status: 'synced' | 'error'
+  thumbnailUrl?: string; box?: [number, number, number, number]; sourceCategory?: string; sourceFile?: string
 }
 
 export function useVaultCollector() {
@@ -18,6 +14,7 @@ export function useVaultCollector() {
   const activeClasses = ref<Record<string, boolean>>({})
   const maxPerClass = ref<number>(20)
   const onlyHardCases = ref<boolean>(false)
+  const hardCaseThreshold = ref<number>(0.65)
   const autoStreamToVault = ref<boolean>(true)
   const collectedStats = ref<Record<string, number>>({})
   const sentLogs = ref<SentFrameLog[]>([])
@@ -28,8 +25,7 @@ export function useVaultCollector() {
 
   const checkHealth = async () => {
     const res = await checkVaultHealth()
-    isVaultOnline.value = res.online
-    vaultHealth.value = res
+    isVaultOnline.value = res.online; vaultHealth.value = res
     if (res.online) {
       const dsets = await fetchVaultDatasets()
       if (dsets.length > 0) {
@@ -55,7 +51,7 @@ export function useVaultCollector() {
       const lbl = String(d.label || d.class_name || '').toLowerCase()
       if (activeClasses.value[lbl] === false) return false
       const conf = d.conf ?? d.confidence ?? 0
-      if (onlyHardCases.value && conf > 0.65) return false
+      if (onlyHardCases.value && conf > hardCaseThreshold.value) return false
       const current = collectedStats.value[lbl] || 0
       return !(maxPerClass.value > 0 && current >= maxPerClass.value)
     })
@@ -100,7 +96,9 @@ export function useVaultCollector() {
             id: res.frameId || `frm_${Date.now()}`, label: lbl.toUpperCase(),
             conf: targetDet.conf ?? targetDet.confidence ?? 0.85,
             timestamp: new Date().toTimeString().split(' ')[0],
-            status: 'synced' as const, thumbnailUrl: thumbUrl
+            status: 'synced' as const, thumbnailUrl: thumbUrl,
+            box: bx as [number, number, number, number],
+            sourceCategory, sourceFile
           }, ...sentLogs.value].slice(0, 15)
 
           const activeKeys = Object.keys(activeClasses.value).filter(k => activeClasses.value[k] !== false)
@@ -115,7 +113,7 @@ export function useVaultCollector() {
 
   return {
     isVaultOnline, vaultHealth, vaultDatasets, selectedDatasetId,
-    activeClasses, maxPerClass, onlyHardCases, autoStreamToVault,
+    activeClasses, maxPerClass, onlyHardCases, hardCaseThreshold, autoStreamToVault,
     collectedStats, totalCollected, sentLogs, isSending,
     checkHealth, resetStats, processFrameDetections
   }

@@ -7,13 +7,13 @@ const props = withDefaults(defineProps<{
   config: Record<string, any>; modelsList?: any[]; hydraStreams?: any[]; mediaFolders?: MediaFolder[]
   isRunning?: boolean; isContinuous?: boolean; isPaused?: boolean; isVaultOnline?: boolean
   vaultDatasets?: VaultDataset[]; selectedDatasetId?: string; activeClasses?: Record<string, boolean>
-  maxPerClass?: number; onlyHardCases?: boolean; autoStreamToVault?: boolean
+  maxPerClass?: number; onlyHardCases?: boolean; hardCaseThreshold?: number; autoStreamToVault?: boolean
   collectedStats?: Record<string, number>; totalCollected?: number
 }>(), {
   modelsList: () => [], hydraStreams: () => [], mediaFolders: () => [],
   isRunning: false, isContinuous: false, isPaused: false, isVaultOnline: false,
   vaultDatasets: () => [], selectedDatasetId: 'frota_urbana_fusion',
-  activeClasses: () => ({}), maxPerClass: 20, onlyHardCases: false,
+  activeClasses: () => ({}), maxPerClass: 20, onlyHardCases: false, hardCaseThreshold: 0.65,
   autoStreamToVault: true, collectedStats: () => ({}), totalCollected: 0
 })
 
@@ -21,8 +21,9 @@ const emit = defineEmits<{
   (e: 'update:config', cfg: Record<string, any>): void; (e: 'update:isContinuous', val: boolean): void
   (e: 'update:isPaused', val: boolean): void; (e: 'update:selectedDatasetId', id: string): void
   (e: 'toggleTargetClass', label: string): void; (e: 'update:maxPerClass', limit: number): void
-  (e: 'update:onlyHardCases', val: boolean): void; (e: 'update:autoStreamToVault', val: boolean): void
-  (e: 'resetCollectorStats'): void; (e: 'checkVaultHealth'): void; (e: 'runInference'): void; (e: 'openMediaModal'): void
+  (e: 'update:onlyHardCases', val: boolean): void; (e: 'update:hardCaseThreshold', val: number): void
+  (e: 'update:autoStreamToVault', val: boolean): void; (e: 'resetCollectorStats'): void
+  (e: 'checkVaultHealth'): void; (e: 'runInference'): void; (e: 'openMediaModal'): void
 }>()
 
 const activeTab = ref<'source' | 'classes' | 'vault_stream'>('source')
@@ -114,9 +115,16 @@ const currentDatasetClasses = computed(() => {
       </div>
 
       <div class="selector-group" style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.5rem;">
-        <button class="cyber-pill" :class="{ active: onlyHardCases }" style="font-size: 0.68rem; padding: 0.25rem 0.5rem; width: 100%; text-align: center;" @click="emit('update:onlyHardCases', !onlyHardCases)">
-          {{ onlyHardCases ? '★ HARD CASES (<65% CONF) ATIVO' : '☆ TODAS AS DETECCOES (>CONF)' }}
+        <button class="cyber-pill" :class="{ active: onlyHardCases }" style="font-size: 0.68rem; padding: 0.25rem 0.5rem; width: 100%; text-align: center; margin-bottom: 0.3rem;" @click="emit('update:onlyHardCases', !onlyHardCases)">
+          {{ onlyHardCases ? '★ MINERAR APENAS CASOS DIFÍCEIS' : '☆ MINERAR TODAS AS DETECÇÕES' }}
         </button>
+        <div v-if="onlyHardCases" style="margin-top: 0.3rem;">
+          <div class="selector-label">
+            <span>TETO MÁXIMO DE CONFIANÇA (ABAIXO DE %)</span>
+            <span class="slider-val" style="color: var(--cb-yellow);">{{ ((hardCaseThreshold || 0.65) * 100).toFixed(0) }}%</span>
+          </div>
+          <input type="range" min="0.30" max="0.90" step="0.05" :value="hardCaseThreshold || 0.65" @input="(e) => emit('update:hardCaseThreshold', parseFloat((e.target as HTMLInputElement).value))" />
+        </div>
       </div>
     </div>
 
