@@ -7,7 +7,8 @@ export function usePlaygroundStream(
   captureFrame: () => string | null,
   detections: Ref<any[]>,
   telemetry: Ref<any>,
-  imageSrc: Ref<string>
+  imageSrc: Ref<string>,
+  isPaused?: Ref<boolean>
 ) {
   let eventSource: EventSource | null = null
   let isLoopActive = false
@@ -16,35 +17,37 @@ export function usePlaygroundStream(
   const runVideoFrameLoop = async (runId: number) => {
     if (!isLoopActive || runId !== currentRunId) return
 
-    const b64 = captureFrame()
-    if (b64) {
-      try {
-        const res = await fetch('/api/v1/inference/predict', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: config.value.model || 'yolo26n',
-            image_base64: b64,
-            conf: config.value.conf || 0.25,
-            iou: config.value.iou || 0.45,
-            sahi: !!config.value.sahi,
-            nms_free: !!config.value.nmsFree,
-            track: true,
-            device: '0'
+    if (!isPaused?.value) {
+      const b64 = captureFrame()
+      if (b64) {
+        try {
+          const res = await fetch('/api/v1/inference/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: config.value.model || 'yolo26n',
+              image_base64: b64,
+              conf: config.value.conf || 0.25,
+              iou: config.value.iou || 0.45,
+              sahi: !!config.value.sahi,
+              nms_free: !!config.value.nmsFree,
+              track: true,
+              device: '0'
+            })
           })
-        })
-        if (res.ok && isLoopActive && runId === currentRunId) {
-          const d = await res.json()
-          if (Array.isArray(d.detections)) detections.value = d.detections
-          if (d.telemetry) telemetry.value = d.telemetry
-        }
-      } catch {}
+          if (res.ok && isLoopActive && runId === currentRunId && !isPaused?.value) {
+            const d = await res.json()
+            if (Array.isArray(d.detections)) detections.value = d.detections
+            if (d.telemetry) telemetry.value = d.telemetry
+          }
+        } catch {}
+      }
     }
 
     if (isLoopActive && runId === currentRunId) {
       setTimeout(() => {
         requestAnimationFrame(() => runVideoFrameLoop(runId))
-      }, 30)
+      }, isPaused?.value ? 100 : 30)
     }
   }
 

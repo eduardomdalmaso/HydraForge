@@ -16,11 +16,34 @@ const props = defineProps<{
   gpuStats?: any
   config?: Record<string, any>
   mediaFolders?: MediaFolder[]
+  isPaused?: boolean
 }>()
 
-const emit = defineEmits<{ (e: 'update:selectedEntity', det: any): void }>()
+const emit = defineEmits<{
+  (e: 'update:selectedEntity', det: any): void
+  (e: 'update:isPaused', paused: boolean): void
+}>()
+
 const imgError = ref(false)
 watch(() => props.imageSrc, () => { imgError.value = false })
+
+const togglePause = () => {
+  const nextState = !props.isPaused
+  emit('update:isPaused', nextState)
+  const vEl = document.getElementById('hud-viewport-video') as HTMLVideoElement | null
+  if (vEl) {
+    if (nextState) vEl.pause()
+    else vEl.play().catch(() => {})
+  }
+}
+
+watch(() => props.isPaused, (p) => {
+  const vEl = document.getElementById('hud-viewport-video') as HTMLVideoElement | null
+  if (vEl) {
+    if (p) vEl.pause()
+    else vEl.play().catch(() => {})
+  }
+})
 
 const isFolderLoop = computed(() => props.config?.source?.startsWith('folder:'))
 const activeFolderName = computed(() => isFolderLoop.value ? props.config?.source?.replace('folder:', '') : '')
@@ -68,30 +91,48 @@ const onImageLoaded = (e: Event) => {
 <template>
   <div class="viewport-hud">
     <div class="viewport-top-bar">
-      <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-        <span>// KIROSHI OPTICAL HUD</span>
+      <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+        <span>// KIROSHI HUD</span>
+        <button
+          v-if="isVideoSource"
+          class="cyber-pill"
+          :class="{ active: isPaused }"
+          style="padding: 2px 7px; font-size: 0.65rem; font-weight: 700;"
+          :style="{
+            background: isPaused ? 'rgba(255,0,60,0.2)' : 'rgba(0,255,157,0.15)',
+            color: isPaused ? 'var(--cb-magenta)' : 'var(--cb-green)',
+            borderColor: isPaused ? 'var(--cb-magenta)' : 'var(--cb-green)'
+          }"
+          :title="isPaused ? 'Clique para despausar vídeo e inferência' : 'Clique para pausar frame'"
+          @click="togglePause"
+        >
+          {{ isPaused ? '▶ PLAY [PAUSADO]' : '⏸ PAUSE' }}
+        </button>
+
         <span
           :style="{
-            fontSize: '0.65rem', padding: '2px 6px', borderRadius: '2px',
+            fontSize: '0.62rem', padding: '2px 5px', borderRadius: '2px',
             background: isWebcam ? 'rgba(0,240,255,0.15)' : (isFolderLoop ? 'rgba(252,238,10,0.15)' : 'rgba(0,255,157,0.15)'),
             color: isWebcam ? 'var(--cb-cyan)' : (isFolderLoop ? 'var(--cb-yellow)' : 'var(--cb-green)'),
             border: `1px solid ${isWebcam ? 'var(--cb-cyan)' : (isFolderLoop ? 'var(--cb-yellow)' : 'var(--cb-green)')}`
           }"
         >
-          {{ isWebcam ? '[HARDWARE] WEBCAM' : (isFolderLoop ? `[PASTA // ${activeFolderName.toUpperCase()}]` : (isHydraLinked ? `[STREAM] ${activeStream?.stream_id?.toUpperCase() || 'SHM'}` : '[STANDBY]')) }}
+          {{ isWebcam ? '[WEBCAM]' : (isFolderLoop ? `[${activeFolderName.toUpperCase()}]` : (isHydraLinked ? `[STREAM // ${activeStream?.stream_id?.toUpperCase() || 'SHM'}]` : '[STANDBY]')) }}
         </span>
 
-        <div v-if="isFolderLoop && folderFiles.length > 1" style="display: flex; align-items: center; gap: 0.3rem;">
-          <button class="cyber-pill" style="padding: 1px 5px; font-size: 0.62rem;" title="Vídeo anterior" @click="prevVideo">◀</button>
-          <span style="font-size: 0.65rem; color: #fff; font-family: var(--font-mono);">{{ currentFileIndex + 1 }}/{{ folderFiles.length }}: {{ currentFile?.name }}</span>
-          <button class="cyber-pill" style="padding: 1px 5px; font-size: 0.62rem;" title="Próximo vídeo" @click="nextVideo">▶</button>
+        <div v-if="isFolderLoop && folderFiles.length > 1" style="display: flex; align-items: center; gap: 0.25rem;">
+          <button class="cyber-pill" style="padding: 1px 4px; font-size: 0.6rem;" title="Vídeo anterior" @click="prevVideo">◀</button>
+          <span style="font-size: 0.62rem; color: #fff; font-family: var(--font-mono);">{{ currentFileIndex + 1 }}/{{ folderFiles.length }}</span>
+          <button class="cyber-pill" style="padding: 1px 4px; font-size: 0.6rem;" title="Próximo vídeo" @click="nextVideo">▶</button>
         </div>
-        <span v-else-if="isFolderLoop && currentFile" style="font-size: 0.65rem; color: var(--cb-muted);">{{ currentFile.name }}</span>
       </div>
 
-      <span style="color: var(--cb-yellow); font-family: var(--font-mono); font-size: 0.72rem;">
-        {{ isContinuous ? '● REALTIME STREAM TRACKING' : (isScanning ? 'INFERENCE...' : `TARGETS: ${detections?.length || 0}`) }}
-      </span>
+      <div style="display: flex; align-items: center; gap: 0.4rem;">
+        <span v-if="isPaused" style="color: var(--cb-magenta); font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700;">[FRAME CONGELADO]</span>
+        <span v-else style="color: var(--cb-yellow); font-family: var(--font-mono); font-size: 0.7rem;">
+          {{ isContinuous ? '● STREAM TRACKING' : (isScanning ? 'INFERENCE...' : `TARGETS: ${detections?.length || 0}`) }}
+        </span>
+      </div>
     </div>
 
     <div class="viewport-stage">

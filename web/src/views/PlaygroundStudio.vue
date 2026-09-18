@@ -8,7 +8,7 @@ import PlaygroundMediaModal from '../components/playground/PlaygroundMediaModal.
 import { useWebcamStream } from '../components/playground/useWebcamStream'
 import { usePlaygroundStream } from '../components/playground/usePlaygroundStream'
 import { usePlaygroundInit } from '../components/playground/usePlaygroundInit'
-import { useDetectionHistory } from '../components/playground/useDetectionHistory'
+import { useVaultCollector } from '../components/playground/useVaultCollector'
 import { fetchMediaSources, type MediaFolder } from '../api/media_client'
 import { runRealInferenceAPI } from '../api/inference_client'
 
@@ -23,16 +23,23 @@ const config = ref({
   isolateBg: false
 })
 
-const { modelsList, hydraStreams, hydraTelemetry, gpuStats } = usePlaygroundInit(config)
+const { modelsList, hydraStreams, gpuStats } = usePlaygroundInit(config)
 const detections = ref<any[]>([])
 const selectedEntity = ref<any>(null)
 const isScanning = ref(false)
 const isContinuous = ref(false)
+const isPaused = ref(false)
 const telemetry = ref<any>(null)
 const imageSrc = ref('/api/v1/hydrastream/api/v1/streams/cam_entrance_01/snapshot.jpg')
-
 const mediaFolders = ref<MediaFolder[]>([])
 const showMediaModal = ref(false)
+
+const {
+  isVaultOnline, vaultDatasets, selectedDatasetId, activeClasses,
+  maxPerClass, onlyHardCases, autoStreamToVault, collectedStats,
+  totalCollected, sentLogs, isSending, checkHealth, resetStats,
+  processFrameDetections
+} = useVaultCollector()
 
 const loadMediaFolders = async () => {
   const data = await fetchMediaSources()
@@ -43,27 +50,37 @@ const loadMediaFolders = async () => {
   }
 }
 
-onMounted(loadMediaFolders)
+onMounted(() => {
+  loadMediaFolders()
+  checkHealth()
+})
 
 const isWebcam = computed(() => config.value.source === 'webcam')
 const isVideoMedia = computed(() => config.value.source?.startsWith('folder:') || config.value.source?.startsWith('video:'))
 const activeStream = computed(() => hydraStreams.value.find(s => s.stream_id === config.value.source) || (hydraStreams.value[0] || null))
 
 const { videoRef, captureFrame } = useWebcamStream(isWebcam)
-usePlaygroundStream(config, isContinuous, isWebcam, captureFrame, detections, telemetry, imageSrc)
+usePlaygroundStream(config, isContinuous, isWebcam, captureFrame, detections, telemetry, imageSrc, isPaused)
 
-const { history, pushDetections, clearHistory } = useDetectionHistory()
+const onGoalReached = () => {
+  isContinuous.value = false
+  isPaused.value = true
+}
 
 watch(detections, (newDets) => {
-  if (newDets && newDets.length > 0) {
+  if (newDets && newDets.length > 0 && !isPaused.value) {
     const el = (isWebcam.value || isVideoMedia.value)
-      ? document.getElementById('hud-viewport-video')
+      ? document.getElementById('hud-viewport-video') as HTMLVideoElement
       : document.getElementById('hud-viewport-image') as any
-    pushDetections(newDets, el, config.value.source)
+    const src = config.value.source || ''
+    const cat = src.startsWith('folder:') ? src.replace('folder:', '') : 'playground'
+    const fn = src.includes('/') ? src.split('/').pop() || 'stream' : src
+    processFrameDetections(newDets, el, cat, fn, onGoalReached)
   }
 }, { deep: true })
 
 const handleInference = async () => {
+  if (!isVaultOnline.value) return
   const b64 = captureFrame()
   const res = await runRealInferenceAPI(config.value, b64)
   if (res) {
@@ -73,9 +90,12 @@ const handleInference = async () => {
     if (Array.isArray(res.detections)) {
       detections.value = res.detections
       const el = (isWebcam.value || isVideoMedia.value)
-        ? document.getElementById('hud-viewport-video')
+        ? document.getElementById('hud-viewport-video') as HTMLVideoElement
         : document.getElementById('hud-viewport-image') as any
-      pushDetections(res.detections, el, config.value.source)
+      const src = config.value.source || ''
+      const cat = src.startsWith('folder:') ? src.replace('folder:', '') : 'playground'
+      const fn = src.includes('/') ? src.split('/').pop() || 'stream' : src
+      processFrameDetections(res.detections, el, cat, fn, onGoalReached)
     }
     if (res.telemetry) telemetry.value = res.telemetry
   }
@@ -86,10 +106,10 @@ const handleInference = async () => {
   <div class="view-container playground-container">
     <div class="cockpit-full-header">
       <h1 class="cockpit-main-title">PLAYGROUND DE INFERENCIA & TRACKING</h1>
-      <p class="cockpit-main-subtitle">HARDWARE NATIVO RTX 5090 // PASTAS DE VIDEOS EM LOOP // INFERENCIA AO VIVO</p>
+      <p class="cockpit-main-subtitle">HARDWARE NATIVO RTX 5090 // STREAM DIRETO HYDRAVAULT // CURADORIA ATIVA</p>
     </div>
 
-    <!-- TOP ROW: LEFT VIEWPORT (720P 16:9) + RIGHT CONTROLS PANEL -->
+    <!-- TOP ROW: LEFT VIEWPORT + RIGHT CONTROLS PANEL -->
     <div class="playground-top-row">
       <div class="playground-viewport-col">
         <PlaygroundViewport
@@ -98,6 +118,7 @@ const handleInference = async () => {
           :selectedEntity="selectedEntity"
           :isScanning="isScanning"
           :isContinuous="isContinuous"
+          :isPaused="isPaused"
           :isHydraLinked="!isWebcam && !isVideoMedia && hydraStreams.length > 0"
           :activeStream="activeStream"
           :isWebcam="isWebcam"
@@ -107,6 +128,7 @@ const handleInference = async () => {
           :config="config"
           :mediaFolders="mediaFolders"
           @update:selectedEntity="(e) => selectedEntity = e"
+          @update:isPaused="(p) => isPaused = p"
         />
       </div>
 
@@ -116,43 +138,52 @@ const handleInference = async () => {
           :modelsList="modelsList"
           :hydraStreams="hydraStreams"
           :mediaFolders="mediaFolders"
-          :isHydraOnline="hydraStreams.length > 0"
           :isRunning="isScanning"
           :isContinuous="isContinuous"
-          :telemetry="telemetry"
-          :gpuStats="gpuStats"
-          :hydraTelemetry="hydraTelemetry"
+          :isPaused="isPaused"
+          :isVaultOnline="isVaultOnline"
+          :vaultDatasets="vaultDatasets"
+          :selectedDatasetId="selectedDatasetId"
+          :activeClasses="activeClasses"
+          :maxPerClass="maxPerClass"
+          :onlyHardCases="onlyHardCases"
+          :autoStreamToVault="autoStreamToVault"
+          :collectedStats="collectedStats"
+          :totalCollected="totalCollected"
           @update:config="(c) => config = c as any"
           @update:isContinuous="(v) => isContinuous = v"
+          @update:isPaused="(p) => isPaused = p"
+          @update:selectedDatasetId="(id) => selectedDatasetId = id"
+          @toggleTargetClass="(cls) => activeClasses[cls] = activeClasses[cls] === false"
+          @update:maxPerClass="(m) => maxPerClass = m"
+          @update:onlyHardCases="(v) => onlyHardCases = v"
+          @update:autoStreamToVault="(v) => autoStreamToVault = v"
+          @resetCollectorStats="resetStats"
+          @checkVaultHealth="checkHealth"
           @runInference="async () => { isScanning = true; await handleInference(); isScanning = false; }"
           @openMediaModal="showMediaModal = true"
         />
       </div>
 
-      <!-- RIGHT COLUMN: REALTIME DETECTION INSPECTOR (OPENS BESIDE TUNING ON CLICK) -->
+      <!-- RIGHT COLUMN: DETECTION INSPECTOR -->
       <div v-if="selectedEntity" class="playground-inspector-col">
-        <PlaygroundDetectionInspector
-          :entity="selectedEntity"
-          @close="selectedEntity = null"
-        />
+        <PlaygroundDetectionInspector :entity="selectedEntity" @close="selectedEntity = null" />
       </div>
     </div>
 
-    <!-- BOTTOM ROW: FULL-WIDTH REALTIME DETECTION FEED -->
+    <!-- BOTTOM ROW: VAULT TRANSMISSION STREAM FEED -->
     <div class="playground-bottom-row">
       <PlaygroundDetectionFeed
-        :events="history"
+        :sentLogs="sentLogs"
+        :totalCollected="totalCollected"
+        :isSending="isSending"
         :selectedEntity="selectedEntity"
         @selectEntity="(e) => selectedEntity = e"
-        @clearHistory="clearHistory"
+        @clearHistory="resetStats"
       />
     </div>
 
     <!-- MEDIA MANAGER MODAL -->
-    <PlaygroundMediaModal
-      v-if="showMediaModal"
-      @close="showMediaModal = false"
-      @mediaUpdated="loadMediaFolders"
-    />
+    <PlaygroundMediaModal v-if="showMediaModal" @close="showMediaModal = false" @mediaUpdated="loadMediaFolders" />
   </div>
 </template>
