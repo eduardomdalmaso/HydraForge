@@ -3,20 +3,10 @@ import { ref, computed, watch } from 'vue'
 import type { MediaFolder } from '../../api/media_client'
 
 const props = defineProps<{
-  imageSrc?: string
-  detections?: any[]
-  selectedEntity?: any
-  isScanning?: boolean
-  isContinuous?: boolean
-  isHydraLinked?: boolean
-  activeStream?: any
-  isWebcam?: boolean
-  videoRef?: any
-  telemetry?: any
-  gpuStats?: any
-  config?: Record<string, any>
-  mediaFolders?: MediaFolder[]
-  isPaused?: boolean
+  imageSrc?: string; detections?: any[]; selectedEntity?: any; isScanning?: boolean
+  isContinuous?: boolean; isHydraLinked?: boolean; activeStream?: any; isWebcam?: boolean
+  videoRef?: any; telemetry?: any; gpuStats?: any; config?: Record<string, any>
+  mediaFolders?: MediaFolder[]; isPaused?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -31,18 +21,12 @@ const togglePause = () => {
   const nextState = !props.isPaused
   emit('update:isPaused', nextState)
   const vEl = document.getElementById('hud-viewport-video') as HTMLVideoElement | null
-  if (vEl) {
-    if (nextState) vEl.pause()
-    else vEl.play().catch(() => {})
-  }
+  if (vEl) nextState ? vEl.pause() : vEl.play().catch(() => {})
 }
 
 watch(() => props.isPaused, (p) => {
   const vEl = document.getElementById('hud-viewport-video') as HTMLVideoElement | null
-  if (vEl) {
-    if (p) vEl.pause()
-    else vEl.play().catch(() => {})
-  }
+  if (vEl) p ? vEl.pause() : vEl.play().catch(() => {})
 })
 
 const isFolderLoop = computed(() => props.config?.source?.startsWith('folder:'))
@@ -61,26 +45,22 @@ const videoSrc = computed(() => {
   return undefined
 })
 
-const handleVideoEnded = () => {
-  if (isFolderLoop.value && folderFiles.value.length > 0) {
-    currentFileIndex.value = (currentFileIndex.value + 1) % folderFiles.value.length
-  }
-}
-const prevVideo = () => {
-  if (folderFiles.value.length > 0) {
-    currentFileIndex.value = (currentFileIndex.value - 1 + folderFiles.value.length) % folderFiles.value.length
-  }
-}
-const nextVideo = () => {
-  if (folderFiles.value.length > 0) {
-    currentFileIndex.value = (currentFileIndex.value + 1) % folderFiles.value.length
-  }
-}
+const handleVideoEnded = () => { if (isFolderLoop.value && folderFiles.value.length > 0) currentFileIndex.value = (currentFileIndex.value + 1) % folderFiles.value.length }
+const prevVideo = () => { if (folderFiles.value.length > 0) currentFileIndex.value = (currentFileIndex.value - 1 + folderFiles.value.length) % folderFiles.value.length }
+const nextVideo = () => { if (folderFiles.value.length > 0) currentFileIndex.value = (currentFileIndex.value + 1) % folderFiles.value.length }
 
 const mediaAspectRatio = ref<string>('16 / 9')
+const playbackSpeed = ref<number>(1.0)
+const setSpeed = (spd: number) => {
+  playbackSpeed.value = spd
+  const vEl = document.getElementById('hud-viewport-video') as HTMLVideoElement | null
+  if (vEl) vEl.playbackRate = spd
+}
+
 const onVideoMetadata = (e: Event) => {
   const el = e.target as HTMLVideoElement
   if (el.videoWidth && el.videoHeight) mediaAspectRatio.value = `${el.videoWidth} / ${el.videoHeight}`
+  el.playbackRate = playbackSpeed.value
 }
 const onImageLoaded = (e: Event) => {
   const el = e.target as HTMLImageElement
@@ -98,16 +78,15 @@ const onImageLoaded = (e: Event) => {
           class="cyber-pill"
           :class="{ active: isPaused }"
           style="padding: 2px 7px; font-size: 0.65rem; font-weight: 700;"
-          :style="{
-            background: isPaused ? 'rgba(255,0,60,0.2)' : 'rgba(0,255,157,0.15)',
-            color: isPaused ? 'var(--cb-magenta)' : 'var(--cb-green)',
-            borderColor: isPaused ? 'var(--cb-magenta)' : 'var(--cb-green)'
-          }"
-          :title="isPaused ? 'Clique para despausar vídeo e inferência' : 'Clique para pausar frame'"
+          :style="{ background: isPaused ? 'rgba(255,0,60,0.2)' : 'rgba(0,255,157,0.15)', color: isPaused ? 'var(--cb-magenta)' : 'var(--cb-green)', borderColor: isPaused ? 'var(--cb-magenta)' : 'var(--cb-green)' }"
           @click="togglePause"
         >
           {{ isPaused ? '▶ PLAY [PAUSADO]' : '⏸ PAUSE' }}
         </button>
+
+        <div v-if="isVideoSource" style="display: flex; gap: 2px;">
+          <button v-for="spd in [0.5, 1.0]" :key="spd" class="cyber-pill" :class="{ active: playbackSpeed === spd }" style="padding: 1px 4px; font-size: 0.6rem;" @click="setSpeed(spd)">{{ spd }}X</button>
+        </div>
 
         <span
           :style="{
@@ -161,10 +140,14 @@ const onImageLoaded = (e: Event) => {
           :style="{
             left: `${det.box[0]}%`, top: `${det.box[1]}%`, width: `${det.box[2]}%`, height: `${det.box[3]}%`,
             borderColor: selectedEntity?.id === det.id ? 'var(--cb-yellow)' : (det.color || 'var(--cb-cyan)'),
-            boxShadow: selectedEntity?.id === det.id ? '0 0 10px var(--cb-yellow)' : '0 0 6px rgba(0,240,255,0.4)'
+            boxShadow: selectedEntity?.id === det.id ? '0 0 12px var(--cb-yellow)' : '0 0 8px rgba(0,240,255,0.3)'
           }"
           @click.stop="emit('update:selectedEntity', det)"
         >
+          <div class="reticle-corner reticle-tl" />
+          <div class="reticle-corner reticle-tr" />
+          <div class="reticle-corner reticle-bl" />
+          <div class="reticle-corner reticle-br" />
           <span class="detection-tag">
             <template v-if="det.track_id">#{{ det.track_id }} </template>
             {{ (det.label || det.class_name || 'TARGET').toUpperCase() }} // {{ (((det.conf ?? det.confidence ?? 0.85)) * 100).toFixed(0) }}%
