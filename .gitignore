@@ -1,10 +1,23 @@
 # Build & Executables
 bin/
 dist/
+hydraforge
+hydraforge.exe*
 *.exe
 *.dll
 *.so
 *.dylib
+
+# Storage, Datasets & SQLite
+storage/
+/datasets/
+/storage/media_sources/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
 
 # Node & Frontend
 node_modules/
