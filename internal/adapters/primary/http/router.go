@@ -85,6 +85,7 @@ func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler
 	authEndpoint("/api/v1/inference/predict", HandleInferencePredict)
 	authEndpoint("/api/v1/inference/live", HandleInferenceLiveStream)
 	authEndpoint("/api/v1/inference/frame", HandleWebcamFrameUpload)
+	mux.HandleFunc("/api/v1/inference/detections", HandleGetLiveDetections)
 }
 
 // WithCORS wraps an http.Handler with universal Cross-Origin Resource Sharing headers.

@@ -294,3 +294,25 @@ func HandleWebcamFrameUpload(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"ok"}`))
 }
+
+// HandleGetLiveDetections returns real-time detections from /dev/shm.
+func HandleGetLiveDetections(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	camID := r.URL.Query().Get("camera_id")
+	if camID == "" {
+		camID = "cam_01"
+	}
+
+	shmFile := fmt.Sprintf("/dev/shm/detections_%s.json", filepath.Base(camID))
+	data, err := os.ReadFile(shmFile)
+	if err != nil || len(data) == 0 {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"waiting","detections":[],"count":0}`))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
+}
