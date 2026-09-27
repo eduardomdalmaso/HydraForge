@@ -27,6 +27,7 @@ type InferenceRequest struct {
 	Conf        float64 `json:"conf"`
 	IoU         float64 `json:"iou"`
 	Device      string  `json:"device"`
+	Classes     string  `json:"classes,omitempty"`
 	Sahi        bool    `json:"sahi,omitempty"`
 	NmsFree     bool    `json:"nms_free,omitempty"`
 	Track       bool    `json:"track,omitempty"`
@@ -122,6 +123,9 @@ func HandleInferencePredict(w http.ResponseWriter, r *http.Request) {
 		"--conf", fmt.Sprintf("%.2f", req.Conf),
 		"--iou", fmt.Sprintf("%.2f", req.IoU),
 		"--device", req.Device,
+	}
+	if req.Classes != "" {
+		args = append(args, "--classes", req.Classes)
 	}
 	if req.Track && !req.Sahi {
 		args = append(args, "--track")

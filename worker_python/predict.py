@@ -37,6 +37,29 @@ def resolve_weights(weights_arg):
     return weights_arg
 
 def resolve_source(source_arg):
+    if source_arg.startswith("http://") or source_arg.startswith("https://"):
+        try:
+            import urllib.request
+            tmp = "/dev/shm/live_infer_url.jpg"
+            urllib.request.urlretrieve(source_arg, tmp)
+            if os.path.exists(tmp) and os.path.getsize(tmp) > 100:
+                return tmp
+        except Exception:
+            pass
+
+    # If it's a camera stream ID, fetch fresh live snapshot from HydraStream
+    cam_clean = os.path.basename(source_arg).replace(".jpg", "")
+    if cam_clean.startswith("cam") or not os.path.exists(source_arg):
+        live_url = f"http://127.0.0.1:8080/api/v1/streams/{cam_clean}/snapshot.jpg?t={time.time()}"
+        try:
+            import urllib.request
+            tmp = f"/dev/shm/live_infer_{cam_clean}.jpg"
+            urllib.request.urlretrieve(live_url, tmp)
+            if os.path.exists(tmp) and os.path.getsize(tmp) > 100:
+                return tmp
+        except Exception:
+            pass
+
     if os.path.exists(source_arg):
         return source_arg
 
@@ -96,6 +119,7 @@ def parse_args():
     parser.add_argument("--iou", type=float, default=0.45, help="IoU NMS threshold")
     parser.add_argument("--device", type=str, default="0", help="CUDA device index or cpu")
     parser.add_argument("--imgsz", type=int, default=640, help="Inference image resolution")
+    parser.add_argument("--classes", type=str, default="", help="Comma separated target classes, e.g. person,pessoa")
     parser.add_argument("--track", action="store_true", help="Enable ByteTrack object tracking")
     parser.add_argument("--sahi", action="store_true", help="Enable SAHI 4K sliced inference")
     parser.add_argument("--nms-free", action="store_true", help="Enable NMS-free end-to-end decode")
@@ -164,6 +188,7 @@ def main():
             detections = []
             speed = {"preprocess": 0.0, "inference": 0.0, "postprocess": 0.0}
 
+            target_classes = [c.strip().lower() for c in args.classes.split(",") if c.strip()]
             if len(results) > 0:
                 res = results[0]
                 if hasattr(res, "speed"):
@@ -174,6 +199,16 @@ def main():
                     cls_id = int(box.cls[0].item())
                     cls_name = res.names.get(cls_id, f"class_{cls_id}")
                     conf = float(box.conf[0].item())
+
+                    if target_classes:
+                        is_target = False
+                        for tc in target_classes:
+                            if tc in cls_name.lower() or (tc in ["pessoa", "person", "human"] and cls_name.lower() in ["person", "human"]):
+                                is_target = True
+                                break
+                        if not is_target:
+                            continue
+
                     xywhn = box.xywhn[0].tolist()
 
                     track_id = None
