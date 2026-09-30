@@ -308,6 +308,10 @@ func HandleGetLiveDetections(w http.ResponseWriter, r *http.Request) {
 	shmFile := fmt.Sprintf("/dev/shm/detections_%s.json", filepath.Base(camID))
 	data, err := os.ReadFile(shmFile)
 	if err != nil || len(data) == 0 {
+		winShm := filepath.Join(os.TempDir(), fmt.Sprintf("detections_%s.json", filepath.Base(camID)))
+		data, err = os.ReadFile(winShm)
+	}
+	if err != nil || len(data) == 0 {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"waiting","detections":[],"count":0}`))
 		return
