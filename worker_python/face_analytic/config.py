@@ -10,7 +10,7 @@ from typing import Dict, Any
 class FaceAnalyticConfig:
     min_height: int = 40
     max_height: int = 0  # 0 indicates unbounded / infinity
-    min_faces: int = 3   # Minimum hits associated with a person track
+    min_faces: int = 25  # Minimum hits associated with a person track (Vezha standard)
     min_confidence: float = 0.60
     blur_threshold: float = 60.0
     adaptive_blur: bool = True
@@ -21,6 +21,8 @@ class FaceAnalyticConfig:
     iou_person_face_threshold: float = 0.30
     save_best_frame_disk: bool = True
     gallery_path: str = ""
+    detector_sensitivity: str = "normal"  # "baixo", "normal", "alto"
+    detect_gender_age: bool = False
 
     def validate(self) -> None:
         """Validates configuration boundaries and logical consistency."""

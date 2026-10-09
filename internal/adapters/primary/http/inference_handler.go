@@ -305,18 +305,22 @@ func HandleGetLiveDetections(w http.ResponseWriter, r *http.Request) {
 		camID = "cam_01"
 	}
 
-	shmFile := fmt.Sprintf("/dev/shm/detections_%s.json", filepath.Base(camID))
-	data, err := os.ReadFile(shmFile)
-	if err != nil || len(data) == 0 {
-		winShm := filepath.Join(os.TempDir(), fmt.Sprintf("detections_%s.json", filepath.Base(camID)))
-		data, err = os.ReadFile(winShm)
+	baseID := filepath.Base(camID)
+	candidates := []string{
+		fmt.Sprintf("/dev/shm/face_detections_%s.json", baseID),
+		fmt.Sprintf("/dev/shm/detections_%s.json", baseID),
+		filepath.Join(os.TempDir(), fmt.Sprintf("face_detections_%s.json", baseID)),
+		filepath.Join(os.TempDir(), fmt.Sprintf("detections_%s.json", baseID)),
 	}
-	if err != nil || len(data) == 0 {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"waiting","detections":[],"count":0}`))
-		return
+
+	for _, p := range candidates {
+		if data, err := os.ReadFile(p); err == nil && len(data) > 0 {
+			w.WriteHeader(http.StatusOK)
+			w.Write(data)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	w.Write([]byte(`{"status":"waiting","detections":[],"count":0}`))
 }

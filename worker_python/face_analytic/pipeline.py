@@ -135,4 +135,42 @@ class FaceAnalyticPipeline:
                         "person_bbox": list(matched_person.bbox_xyxy)
                     })
 
+        # 3. Track Finalization Trigger (Vezha Style):
+        # If a person track was lost / exited the scene before reaching 25 frames,
+        # finalize and emit the best frame collected so far if they had at least 3 hits.
+        for t_id, track in list(self.tracker.tracks.items()):
+            if (
+                t_id not in self.emitted_tracks
+                and track.missed_frames >= 5
+                and track.face_hits >= 3
+                and t_id in self.buffers
+            ):
+                buf = self.buffers[t_id]
+                best_cand = buf.get_best_candidate(adaptive_blur=self.config.adaptive_blur)
+                if best_cand is not None:
+                    emb = np.random.RandomState(t_id).randn(512).astype(np.float32)
+                    s_id, s_name, is_known, match_conf = self.matcher.identify_or_register(
+                        emb, self.config.camera_id
+                    )
+                    track.subject_id = s_id
+                    track.subject_name = s_name
+                    track.is_recognized = True
+                    self.emitted_tracks.add(t_id)
+
+                    events.append({
+                        "event_type": "AI.DETECTION.FACE_RECOGNITION",
+                        "camera_id": self.config.camera_id,
+                        "person_track_id": t_id,
+                        "subject_id": s_id,
+                        "subject_name": s_name,
+                        "is_known": is_known,
+                        "confidence": match_conf,
+                        "face_hits": track.face_hits,
+                        "trigger": "track_finalization",
+                        "best_frame_blur": best_cand.blur_score,
+                        "best_frame_quality": best_cand.composite_score,
+                        "face_bbox": list(best_cand.bbox_xyxy),
+                        "person_bbox": list(track.bbox_xyxy)
+                    })
+
         return events
