@@ -162,6 +162,9 @@ func resolveModelWeights(model string) string {
 	}
 	cleanID := strings.TrimSuffix(model, ".pt")
 	candidates := []string{
+		filepath.Join("storage/models", model),
+		filepath.Join("storage/models", cleanID+".pt"),
+		filepath.Join("storage/engines", cleanID+".engine"),
 		filepath.Join("runs/train", cleanID, "weights/best.pt"),
 		filepath.Join("weights", model),
 		filepath.Join("weights", cleanID+".pt"),
