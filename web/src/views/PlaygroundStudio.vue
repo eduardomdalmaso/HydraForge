@@ -5,6 +5,8 @@ import PlaygroundUnifiedPanel from '../components/playground/PlaygroundUnifiedPa
 import PlaygroundDetectionInspector from '../components/playground/PlaygroundDetectionInspector.vue'
 import PlaygroundDetectionFeed from '../components/playground/PlaygroundDetectionFeed.vue'
 import PlaygroundMediaModal from '../components/playground/PlaygroundMediaModal.vue'
+import PlaygroundRtspModal from '../components/playground/PlaygroundRtspModal.vue'
+import { fetchHydraStreams } from '../api/hydrastream_client'
 import { useWebcamStream } from '../components/playground/useWebcamStream'
 import { usePlaygroundStream } from '../components/playground/usePlaygroundStream'
 import { usePlaygroundInit } from '../components/playground/usePlaygroundInit'
@@ -13,8 +15,8 @@ import { fetchMediaSources, type MediaFolder } from '../api/media_client'
 import { runRealInferenceAPI } from '../api/inference_client'
 
 const config = ref({
-  model: 'yolo26n',
-  source: 'folder:carros',
+  model: 'person_detection_reinforced',
+  source: 'cam_live_d38',
   runtime: 'pytorch',
   conf: 0.25,
   iou: 0.45,
@@ -30,9 +32,16 @@ const isScanning = ref(false)
 const isContinuous = ref(false)
 const isPaused = ref(false)
 const telemetry = ref<any>(null)
-const imageSrc = ref('/api/v1/hydrastream/api/v1/streams/cam_entrance_01/snapshot.jpg')
+const imageSrc = ref('/api/v1/inference/frame?source=cam_live_d38')
 const mediaFolders = ref<MediaFolder[]>([])
 const showMediaModal = ref(false)
+const showRtspModal = ref(false)
+const onStreamAdded = async (sid: string) => {
+  const s = await fetchHydraStreams()
+  if (s?.length) hydraStreams.value = s
+  config.value.source = sid
+  imageSrc.value = `/api/v1/inference/frame?source=${sid}&t=${Date.now()}`
+}
 
 const {
   isVaultOnline, vaultDatasets, selectedDatasetId, activeClasses,
@@ -80,7 +89,6 @@ watch(detections, (newDets) => {
 }, { deep: true })
 
 const handleInference = async () => {
-  if (!isVaultOnline.value) return
   const b64 = captureFrame()
   const res = await runRealInferenceAPI(config.value, b64)
   if (res) {
@@ -151,19 +159,14 @@ const handleInference = async () => {
           :autoStreamToVault="autoStreamToVault"
           :collectedStats="collectedStats"
           :totalCollected="totalCollected"
-          @update:config="(c) => config = c as any"
-          @update:isContinuous="(v) => isContinuous = v"
-          @update:isPaused="(p) => isPaused = p"
-          @update:selectedDatasetId="(id) => selectedDatasetId = id"
+          @update:config="(c) => config = c as any" @update:isContinuous="(v) => isContinuous = v"
+          @update:isPaused="(p) => isPaused = p" @update:selectedDatasetId="(id) => selectedDatasetId = id"
           @toggleTargetClass="(cls) => activeClasses[cls] = activeClasses[cls] === false"
-          @update:maxPerClass="(m) => maxPerClass = m"
-          @update:onlyHardCases="(v) => onlyHardCases = v"
-          @update:hardCaseThreshold="(v) => hardCaseThreshold = v"
-          @update:autoStreamToVault="(v) => autoStreamToVault = v"
-          @resetCollectorStats="resetStats"
-          @checkVaultHealth="checkHealth"
+          @update:maxPerClass="(m) => maxPerClass = m" @update:onlyHardCases="(v) => onlyHardCases = v"
+          @update:hardCaseThreshold="(v) => hardCaseThreshold = v" @update:autoStreamToVault="(v) => autoStreamToVault = v"
+          @resetCollectorStats="resetStats" @checkVaultHealth="checkHealth"
           @runInference="async () => { isScanning = true; await handleInference(); isScanning = false; }"
-          @openMediaModal="showMediaModal = true"
+          @openMediaModal="showMediaModal = true" @openRtspModal="showRtspModal = true"
         />
       </div>
 
@@ -176,16 +179,13 @@ const handleInference = async () => {
     <!-- BOTTOM ROW: VAULT TRANSMISSION STREAM FEED -->
     <div class="playground-bottom-row">
       <PlaygroundDetectionFeed
-        :sentLogs="sentLogs"
-        :totalCollected="totalCollected"
-        :isSending="isSending"
-        :selectedEntity="selectedEntity"
-        @selectEntity="(e) => selectedEntity = e"
-        @clearHistory="resetStats"
+        :sentLogs="sentLogs" :totalCollected="totalCollected" :isSending="isSending"
+        :selectedEntity="selectedEntity" @selectEntity="(e) => selectedEntity = e" @clearHistory="resetStats"
       />
     </div>
 
-    <!-- MEDIA MANAGER MODAL -->
+    <!-- MODALS: MEDIA MANAGER & RTSP INGESTER -->
     <PlaygroundMediaModal v-if="showMediaModal" @close="showMediaModal = false" @mediaUpdated="loadMediaFolders" />
+    <PlaygroundRtspModal :isOpen="showRtspModal" @close="showRtspModal = false" @streamAdded="onStreamAdded" />
   </div>
 </template>

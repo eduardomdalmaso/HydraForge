@@ -58,6 +58,7 @@ runs/
 # Environment & Secrets
 .env
 .env.local
+ecosystem.config.*
 *.pem
 *.key
 *.crt

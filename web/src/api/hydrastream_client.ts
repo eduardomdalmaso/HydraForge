@@ -34,3 +34,21 @@ export function getStreamMJPEGUrl(streamId?: string): string {
   if (!streamId) return ''
   return `${HYDRASTREAM_BASE}/api/v1/streams/${encodeURIComponent(streamId)}/mjpeg`
 }
+
+export async function registerHydraStream(streamId: string, sourceUrl: string, ingestFps = 25): Promise<any> {
+  const res = await fetch(`${HYDRASTREAM_BASE}/api/v1/streams`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      stream_id: streamId,
+      source_url: sourceUrl,
+      ingest_fps: ingestFps
+    })
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `HTTP ${res.status}`)
+  }
+  return await res.json()
+}
+

@@ -53,6 +53,9 @@ func setupTestMux(t *testing.T) *http.ServeMux {
 	if err != nil {
 		t.Fatalf("failed to init test sqlite store: %v", err)
 	}
+	t.Cleanup(func() {
+		_ = sqlStore.Close()
+	})
 
 	mediaStore, err := storage.NewLocalMediaStore(tmpDir + "/media")
 	if err != nil {

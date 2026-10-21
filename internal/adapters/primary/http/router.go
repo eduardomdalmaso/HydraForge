@@ -84,7 +84,13 @@ func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler
 	// 7. Real-Time Optical YOLO Inference (NVIDIA RTX 5090)
 	authEndpoint("/api/v1/inference/predict", HandleInferencePredict)
 	authEndpoint("/api/v1/inference/live", HandleInferenceLiveStream)
-	authEndpoint("/api/v1/inference/frame", HandleWebcamFrameUpload)
+	mux.HandleFunc("/api/v1/inference/frame", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet || r.Method == http.MethodHead {
+			HandleGetInferenceFrame(w, r)
+			return
+		}
+		HandleWebcamFrameUpload(w, r)
+	})
 	mux.HandleFunc("/api/v1/inference/detections", HandleGetLiveDetections)
 }
 

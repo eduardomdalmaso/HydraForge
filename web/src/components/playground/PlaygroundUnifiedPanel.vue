@@ -24,6 +24,7 @@ const emit = defineEmits<{
   (e: 'update:onlyHardCases', val: boolean): void; (e: 'update:hardCaseThreshold', val: number): void
   (e: 'update:autoStreamToVault', val: boolean): void; (e: 'resetCollectorStats'): void
   (e: 'checkVaultHealth'): void; (e: 'runInference'): void; (e: 'openMediaModal'): void
+  (e: 'openRtspModal'): void
 }>()
 
 const activeTab = ref<'source' | 'classes' | 'vault_stream'>('source')
@@ -74,7 +75,10 @@ const currentDatasetClasses = computed(() => {
       <div class="selector-group">
         <div class="selector-label" style="display: flex; justify-content: space-between; align-items: center;">
           <span>FONTE DE MÍDIA</span>
-          <button type="button" class="del-btn" style="color: var(--cb-cyan); border-color: rgba(0,240,255,0.4);" @click="emit('openMediaModal')">+ VÍDEOS</button>
+          <div style="display: flex; gap: 0.35rem;">
+            <button type="button" class="del-btn" style="color: var(--cb-yellow); border-color: rgba(252,238,10,0.4);" @click="emit('openRtspModal')">+ RTSP</button>
+            <button type="button" class="del-btn" style="color: var(--cb-cyan); border-color: rgba(0,240,255,0.4);" @click="emit('openMediaModal')">+ VÍDEOS</button>
+          </div>
         </div>
         <select class="cyber-select" :value="config.source" @change="(e) => updateField('source', (e.target as HTMLSelectElement).value)">
           <optgroup label="[PASTAS DE VIDEOS]">
@@ -153,24 +157,23 @@ const currentDatasetClasses = computed(() => {
       <button class="cyber-pill" style="width: 100%; font-size: 0.65rem; padding: 0.2rem;" @click="emit('resetCollectorStats')">[RESETAR CONTADORES]</button>
     </div>
 
-    <!-- ACTION CONTROLS (LOCKED IF VAULT OFFLINE) -->
+    <!-- ACTION CONTROLS -->
     <div style="padding: 0.6rem; border-top: 1px solid var(--vms-border); background: rgba(0,0,0,0.2);">
-      <div v-if="!isVaultOnline" style="color: var(--cb-magenta); font-size: 0.68rem; font-family: var(--font-mono); margin-bottom: 0.4rem; text-align: center;">
-        // CONEXAO COM HYDRAVAULT (:8082) REQUERIDA PARA INFERENCIA
+      <div v-if="!isVaultOnline" style="color: var(--cb-yellow); font-size: 0.65rem; font-family: var(--font-mono); margin-bottom: 0.35rem; text-align: center;">
+        // MODO VALIDACAO DIRETA // CURADORIA VAULT (:8082) EM STANDBY
       </div>
 
       <div style="display: flex; gap: 0.4rem;">
-        <button class="cyber-action-btn" style="flex: 1; padding: 0.65rem; font-size: 0.72rem;" :disabled="!isVaultOnline || isRunning" @click="emit('runInference')">
+        <button class="cyber-action-btn" style="flex: 1; padding: 0.65rem; font-size: 0.72rem;" :disabled="isRunning" @click="emit('runInference')">
           {{ isRunning ? 'SCANNING...' : 'SCAN 1 FRAME' }}
         </button>
         <button
           class="cyber-action-btn"
           style="flex: 1.2; padding: 0.65rem; font-size: 0.72rem;"
           :style="{ background: isContinuous ? (isPaused ? 'var(--cb-yellow)' : 'var(--cb-green)') : 'rgba(0,240,255,0.1)', color: isContinuous ? '#07080c' : 'var(--cb-cyan)', border: '1px solid var(--cb-cyan)' }"
-          :disabled="!isVaultOnline"
           @click="emit('update:isContinuous', !isContinuous)"
         >
-          {{ isContinuous ? (isPaused ? 'STREAM [PAUSADO]' : 'STREAM [COLETANDO]') : '▶ INICIAR STREAM & COLETAR' }}
+          {{ isContinuous ? (isPaused ? 'STREAM [PAUSADO]' : 'STREAM [ATIVO]') : '▶ INICIAR STREAM TRACKING' }}
         </button>
       </div>
     </div>

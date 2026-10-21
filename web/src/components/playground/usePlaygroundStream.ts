@@ -65,7 +65,7 @@ export function usePlaygroundStream(
 
     if (!isContinuous.value) {
       if (!isFrameUploader) {
-        imageSrc.value = `/api/v1/hydrastream/api/v1/streams/${config.value.source}/snapshot.jpg?t=${Date.now()}`
+        imageSrc.value = `/api/v1/inference/frame?source=${config.value.source}&t=${Date.now()}`
       }
       return
     }
@@ -74,10 +74,10 @@ export function usePlaygroundStream(
       isLoopActive = true
       runVideoFrameLoop(currentRunId)
     } else {
-      imageSrc.value = `/api/v1/hydrastream/api/v1/streams/${config.value.source}/mjpeg?t=${Date.now()}`
+      imageSrc.value = `/api/v1/inference/frame?source=${config.value.source}&t=${Date.now()}`
       const sParams = new URLSearchParams({
         model: config.value.model || 'yolo26n',
-        source: config.value.source || 'cam_entrance_01',
+        source: config.value.source || 'cam_01',
         conf: String(config.value.conf || 0.25),
         iou: String(config.value.iou || 0.45),
         sahi: config.value.sahi ? 'true' : 'false',
@@ -89,6 +89,9 @@ export function usePlaygroundStream(
           const d = JSON.parse(e.data)
           if (Array.isArray(d.detections)) detections.value = d.detections
           if (d.telemetry) telemetry.value = d.telemetry
+          if (d.displayImageUrl || d.image_url) {
+            imageSrc.value = d.displayImageUrl || d.image_url
+          }
         } catch {}
       }
     }

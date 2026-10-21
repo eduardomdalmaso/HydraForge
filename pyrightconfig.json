@@ -1,0 +1,21 @@
+{
+  "venvPath": "C:\\Users\\hades\\miniconda3\\envs",
+  "venv": "reductor-prompt",
+  "pythonPath": "C:\\Users\\hades\\miniconda3\\envs\\reductor-prompt\\python.exe",
+  "pythonPlatform": "Windows",
+  "pythonVersion": "3.11",
+  "extraPaths": [
+    "C:\\Users\\hades\\miniconda3\\envs\\reductor-prompt\\Lib\\site-packages",
+    "worker_python"
+  ],
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "pythonPath": "C:\\Users\\hades\\miniconda3\\envs\\reductor-prompt\\python.exe",
+      "extraPaths": [
+        "C:\\Users\\hades\\miniconda3\\envs\\reductor-prompt\\Lib\\site-packages",
+        "worker_python"
+      ]
+    }
+  ]
+}

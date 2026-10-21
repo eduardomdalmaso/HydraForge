@@ -70,8 +70,12 @@ func GetPythonBin() string {
 	}
 	home := GetHomeDir()
 	candidates := []string{
+		filepath.Join(home, "miniconda3/envs/reductor-prompt/python.exe"),
+		filepath.Join(home, "miniconda3/envs/analytics-env/python.exe"),
 		filepath.Join(home, "miniconda3/envs/analytics-env/bin/python"),
 		filepath.Join(home, "miniconda3/envs/hydraforge/bin/python"),
+		filepath.Join(home, "miniconda3/python.exe"),
+		"C:\\Python315\\python.exe",
 		filepath.Join(home, "anaconda3/envs/analytics-env/bin/python"),
 		filepath.Join(home, ".conda/envs/analytics-env/bin/python"),
 	}
@@ -86,10 +90,13 @@ func GetPythonBin() string {
 			return p
 		}
 	}
+	if p, err := exec.LookPath("python"); err == nil {
+		return p
+	}
 	if p, err := exec.LookPath("python3"); err == nil {
 		return p
 	}
-	return "python3"
+	return "python"
 }
 
 // GetHydraStreamSamplesDir returns the location of HydraStream sample images.

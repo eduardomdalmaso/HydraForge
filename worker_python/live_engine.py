@@ -2,12 +2,15 @@
 """
 HydraForge Continuous Real-Time Analytics Engine (RTX 5090 / Zero-Latency Worker)
 Loads YOLO weights once into VRAM and yields continuous detection JSON to stdout.
+Reads live frames via OpenCV VideoCapture (RTSP/RTMP) or HydraStream live snapshots.
 """
 import sys
 import json
 import time
 import argparse
 import os
+import urllib.request
+import numpy as np
 
 def resolve_weights(weights_arg):
     if os.path.exists(weights_arg):
@@ -25,6 +28,9 @@ def resolve_weights(weights_arg):
 
     candidates = [
         os.path.join(base_dir, "runs/train", clean_id, "weights", "best.pt"),
+        os.path.join(base_dir, "storage/models", f"{clean_id}.pt"),
+        os.path.join(base_dir, "storage/models", clean_id),
+        os.path.join(base_dir, "storage/engines", f"{clean_id}.engine"),
         os.path.join(base_dir, "weights", f"{clean_id}.pt"),
         os.path.join(base_dir, "weights", f"{clean_id}.engine"),
     ]
@@ -43,6 +49,7 @@ def main():
     parser = argparse.ArgumentParser(description="HydraForge Live Analytics Engine")
     parser.add_argument("--weights", type=str, required=True)
     parser.add_argument("--source", type=str, required=True)
+    parser.add_argument("--classes", type=str, default="")
     parser.add_argument("--conf", type=float, default=0.25)
     parser.add_argument("--iou", type=float, default=0.45)
     parser.add_argument("--device", type=str, default="0")
@@ -59,59 +66,130 @@ def main():
     model = YOLO(weights_path)
     device = 0 if (torch.cuda.is_available() and args.device != "cpu") else "cpu"
     effective_iou = 1.0 if args.nms_free else args.iou
+    target_classes = [c.strip().lower() for c in args.classes.split(",") if c.strip()]
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     home_dir = os.path.expanduser("~")
     samples_env = os.environ.get("HYDRASTREAM_SAMPLES_DIR", "")
 
+    source = args.source
+    is_rtsp = source.startswith("rtsp://") or source.startswith("rtmp://")
+    is_http = source.startswith("http://") or source.startswith("https://")
+    cam_id = os.path.basename(source).replace(".jpg", "")
+
+    captures_dir = os.path.join(base_dir, "storage/captures")
+    os.makedirs(captures_dir, exist_ok=True)
+
+    # If camera ID, resolve RTSP source URL from HydraStream
+    if not is_rtsp and not is_http:
+        try:
+            req = urllib.request.Request("http://127.0.0.1:8080/api/v1/streams", headers={"User-Agent": "HydraForge/1.0"})
+            with urllib.request.urlopen(req, timeout=1.5) as resp:
+                sdata = json.loads(resp.read().decode('utf-8'))
+                for st in sdata.get("streams", []):
+                    if st.get("stream_id") == cam_id and st.get("source_url"):
+                        resolved_url = st.get("source_url")
+                        if resolved_url.startswith("rtsp://") or resolved_url.startswith("rtmp://"):
+                            source = resolved_url
+                            is_rtsp = True
+                            break
+        except Exception:
+            pass
+
+    rtsp_cap = None
+    if is_rtsp:
+        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|fflags;nobuffer|flags;low_delay"
+        try:
+            rtsp_cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
+            rtsp_cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        except Exception:
+            rtsp_cap = None
+
     while True:
         try:
-            source_path = args.source
-            if not os.path.exists(source_path):
-                # check shm sample
-                sample_candidates = []
-                if samples_env:
-                    sample_candidates.extend([
-                        os.path.join(samples_env, f"{source_path}.jpg"),
-                        os.path.join(samples_env, source_path),
-                        os.path.join(samples_env, "cam_01.jpg"),
-                    ])
-                sample_candidates.extend([
-                    os.path.join(base_dir, "../HydraStream/samples", f"{source_path}.jpg"),
-                    os.path.join(base_dir, "../HydraStream/samples", source_path),
-                    os.path.join(home_dir, "Documents/HydraStream/samples", f"{source_path}.jpg"),
-                    os.path.join(home_dir, "Documents/HydraStream/samples", source_path),
-                    os.path.join(home_dir, "Documents/HydraStream/samples/cam_01.jpg"),
-                ])
-                found = False
-                for sc in sample_candidates:
-                    if os.path.exists(sc):
-                        source_path = sc
-                        found = True
-                        break
-                if not found:
-                    time.sleep(0.04)
+            frame = None
+            # 1. Direct RTSP stream via OpenCV
+            if is_rtsp:
+                if rtsp_cap is None or not rtsp_cap.isOpened():
+                    rtsp_cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
+                    rtsp_cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                ret, frame = rtsp_cap.read()
+                if not ret or frame is None:
+                    time.sleep(0.1)
                     continue
+
+            # 2. HTTP/HTTPS snapshot or stream
+            elif is_http:
+                try:
+                    req = urllib.request.Request(source, headers={"User-Agent": "HydraForge/1.0"})
+                    with urllib.request.urlopen(req, timeout=1.5) as resp:
+                        arr = np.frombuffer(resp.read(), dtype=np.uint8)
+                        frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+                except Exception:
+                    frame = None
+
+            # 3. HydraStream camera ID: live snapshot from HydraStream Data Plane
+            if frame is None and (cam_id.startswith("cam") or cam_id.startswith("test_") or not os.path.exists(source)):
+                live_url = f"http://127.0.0.1:8080/api/v1/streams/{cam_id}/snapshot.jpg"
+                try:
+                    req = urllib.request.Request(live_url, headers={"User-Agent": "HydraForge/1.0"})
+                    with urllib.request.urlopen(req, timeout=1.5) as resp:
+                        arr = np.frombuffer(resp.read(), dtype=np.uint8)
+                        frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+                except Exception:
+                    frame = None
+
+            # 4. Fallback to local files/samples
+            if frame is None:
+                source_path = source
+                if not os.path.exists(source_path):
+                    sample_candidates = []
+                    if samples_env:
+                        sample_candidates.extend([
+                            os.path.join(samples_env, f"{source_path}.jpg"),
+                            os.path.join(samples_env, source_path),
+                            os.path.join(samples_env, "cam_01.jpg"),
+                        ])
+                    sample_candidates.extend([
+                        os.path.join(base_dir, "../HydraStream/samples", f"{source_path}.jpg"),
+                        os.path.join(base_dir, "../HydraStream/samples", source_path),
+                        os.path.join(home_dir, "Documents/HydraStream/samples", f"{source_path}.jpg"),
+                        os.path.join(home_dir, "Documents/HydraStream/samples", source_path),
+                        os.path.join(home_dir, "Documents/HydraStream/samples/cam_01.jpg"),
+                    ])
+                    for sc in sample_candidates:
+                        if os.path.exists(sc):
+                            source_path = sc
+                            break
+                if os.path.exists(source_path):
+                    frame = cv2.imread(source_path)
+
+            if frame is None:
+                time.sleep(0.04)
+                continue
+
+            # Save live frame for browser display
+            try:
+                cv2.imwrite(os.path.join(captures_dir, f"{cam_id}.jpg"), frame)
+                cv2.imwrite(os.path.join(captures_dir, "latest.jpg"), frame)
+            except Exception:
+                pass
 
             t0 = time.perf_counter()
             if args.sahi:
-                img = cv2.imread(source_path)
-                if img is not None:
-                    detections = run_sahi_inference(
-                        model=model,
-                        img=img,
-                        conf=args.conf,
-                        iou=effective_iou,
-                        device=device,
-                        imgsz=640,
-                        nms_free=args.nms_free
-                    )
-                else:
-                    detections = []
+                detections = run_sahi_inference(
+                    model=model,
+                    img=frame,
+                    conf=args.conf,
+                    iou=effective_iou,
+                    device=device,
+                    imgsz=640,
+                    nms_free=args.nms_free
+                )
                 inf_ms = (time.perf_counter() - t0) * 1000.0
             else:
                 results = model.track(
-                    source=source_path,
+                    source=frame,
                     conf=args.conf,
                     iou=effective_iou,
                     device=device,
@@ -128,8 +206,17 @@ def main():
                         cls_id = int(box.cls[0].item())
                         cls_name = res.names.get(cls_id, f"class_{cls_id}")
                         conf = float(box.conf[0].item())
-                        xywhn = box.xywhn[0].tolist()
 
+                        if target_classes:
+                            is_target = False
+                            for tc in target_classes:
+                                if tc in cls_name.lower() or (tc in ["pessoa", "person", "human"] and cls_name.lower() in ["person", "human"]):
+                                    is_target = True
+                                    break
+                            if not is_target:
+                                continue
+
+                        xywhn = box.xywhn[0].tolist()
                         track_id = None
                         if box.id is not None:
                             track_id = int(box.id[0].item())
@@ -164,13 +251,15 @@ def main():
 
             payload = {
                 "status": "success",
+                "displayImageUrl": f"/api/v1/inference/frame?source={cam_id}&t={int(time.time()*1000)}",
+                "image_url": f"/api/v1/inference/frame?source={cam_id}&t={int(time.time()*1000)}",
                 "detections": detections,
                 "count": len(detections),
                 "telemetry": {
                     "inference_ms": f"{inf_ms:.2f}",
                     "fps": f"{fps:,.0f}",
                     "vram_mb": f"{vram_mb:,.0f}",
-                    "device": "NVIDIA GeForce RTX 5090"
+                    "device": "NVIDIA GeForce RTX 5090" if torch.cuda.is_available() else "CPU"
                 }
             }
             print(json.dumps(payload), flush=True)

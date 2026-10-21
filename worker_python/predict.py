@@ -21,6 +21,9 @@ def resolve_weights(weights_arg):
 
     candidates = [
         os.path.join(base_dir, "runs/train", clean_id, "weights", "best.pt"),
+        os.path.join(base_dir, "storage/models", f"{clean_id}.pt"),
+        os.path.join(base_dir, "storage/models", clean_id),
+        os.path.join(base_dir, "storage/engines", f"{clean_id}.engine"),
         os.path.join(base_dir, "weights", f"{clean_id}.pt"),
         os.path.join(base_dir, "weights", f"{clean_id}.engine"),
     ]
@@ -37,26 +40,84 @@ def resolve_weights(weights_arg):
     return weights_arg
 
 def resolve_source(source_arg):
+    import tempfile
+    tmp_dir = tempfile.gettempdir()
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    captures_dir = os.path.join(base_dir, "storage/captures")
+    os.makedirs(captures_dir, exist_ok=True)
+    cam_clean = os.path.basename(source_arg).replace(".jpg", "")
+
+    # 1. Direct RTSP / RTMP video stream capture with OpenCV
+    if source_arg.startswith("rtsp://") or source_arg.startswith("rtmp://"):
+        try:
+            import cv2
+            os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = 'rtsp_transport;tcp|fflags;nobuffer|flags;low_delay'
+            cap = cv2.VideoCapture(source_arg, cv2.CAP_FFMPEG)
+            cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000)
+            cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000)
+            ret, frame = cap.read()
+            cap.release()
+            if ret and frame is not None and frame.size > 0:
+                tmp = os.path.join(tmp_dir, f"live_infer_{cam_clean}.jpg")
+                cap_file = os.path.join(captures_dir, f"{cam_clean}.jpg")
+                latest_file = os.path.join(captures_dir, "latest.jpg")
+                cv2.imwrite(tmp, frame)
+                cv2.imwrite(cap_file, frame)
+                cv2.imwrite(latest_file, frame)
+                return cap_file
+        except Exception:
+            pass
+
+    # 2. HTTP image or MJPEG frame capture
     if source_arg.startswith("http://") or source_arg.startswith("https://"):
         try:
             import urllib.request
-            tmp = "/dev/shm/live_infer_url.jpg"
+            tmp = os.path.join(tmp_dir, "live_infer_url.jpg")
             urllib.request.urlretrieve(source_arg, tmp)
             if os.path.exists(tmp) and os.path.getsize(tmp) > 100:
                 return tmp
         except Exception:
             pass
 
-    # If it's a camera stream ID, fetch fresh live snapshot from HydraStream
-    cam_clean = os.path.basename(source_arg).replace(".jpg", "")
-    if cam_clean.startswith("cam") or not os.path.exists(source_arg):
+    # 3. HydraStream stream ID: resolve RTSP source URL from Data Plane or fetch snapshot
+    if cam_clean.startswith("cam") or cam_clean.startswith("test_") or not os.path.exists(source_arg):
+        try:
+            import urllib.request, json, cv2
+            req = urllib.request.Request("http://127.0.0.1:8080/api/v1/streams", headers={'User-Agent': 'HydraForge/1.0'})
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                sdata = json.loads(resp.read().decode('utf-8'))
+                for st in sdata.get("streams", []):
+                    if st.get("stream_id") == cam_clean and st.get("source_url"):
+                        rtsp_url = st.get("source_url")
+                        if rtsp_url.startswith("rtsp://") or rtsp_url.startswith("rtmp://"):
+                            os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = 'rtsp_transport;tcp|fflags;nobuffer|flags;low_delay'
+                            cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
+                            cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000)
+                            cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000)
+                            ret, frame = cap.read()
+                            cap.release()
+                            if ret and frame is not None and frame.size > 0:
+                                cap_file = os.path.join(captures_dir, f"{cam_clean}.jpg")
+                                latest_file = os.path.join(captures_dir, "latest.jpg")
+                                cv2.imwrite(cap_file, frame)
+                                cv2.imwrite(latest_file, frame)
+                                return cap_file
+        except Exception:
+            pass
+
+        # Fallback to snapshot endpoint
         live_url = f"http://127.0.0.1:8080/api/v1/streams/{cam_clean}/snapshot.jpg?t={time.time()}"
         try:
-            import urllib.request
-            tmp = f"/dev/shm/live_infer_{cam_clean}.jpg"
-            urllib.request.urlretrieve(live_url, tmp)
-            if os.path.exists(tmp) and os.path.getsize(tmp) > 100:
-                return tmp
+            import urllib.request, cv2, numpy as np
+            req = urllib.request.Request(live_url, headers={'User-Agent': 'HydraForge-Inference/1.0'})
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                arr = np.asarray(bytearray(resp.read()), dtype=np.uint8)
+                img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+                if img is not None and img.size > 0:
+                    cap_file = os.path.join(captures_dir, f"{cam_clean}.jpg")
+                    cv2.imwrite(cap_file, img)
+                    cv2.imwrite(os.path.join(captures_dir, "latest.jpg"), img)
+                    return cap_file
         except Exception:
             pass
 
@@ -247,11 +308,13 @@ def main():
         if torch.cuda.is_available():
             vram_mb = round(torch.cuda.memory_allocated(0) / (1024 * 1024), 1)
 
+        cam_id = os.path.basename(source_path).replace(".jpg", "")
         payload = {
             "status": "success",
             "model": os.path.basename(weights_path),
             "model_path": weights_path,
             "source": source_path,
+            "displayImageUrl": f"/api/v1/inference/frame?source={cam_id}&t={int(time.time()*1000)}",
             "detections": detections,
             "count": len(detections),
             "telemetry": {

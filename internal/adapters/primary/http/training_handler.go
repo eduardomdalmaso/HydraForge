@@ -581,10 +581,11 @@ func (h *TrainingHandler) HandleDatasetRegisterPath(w http.ResponseWriter, r *ht
 	}
 
 	cleanReqPath := filepath.Clean(req.Path)
+	normalizedPath := filepath.ToSlash(cleanReqPath)
 	// Block sensitive system directories
-	disallowedPrefixes := []string{"/etc", "/root", "/proc", "/sys", "/dev", "/boot", "/var/run", "/usr", "/bin", "/sbin"}
+	disallowedPrefixes := []string{"/etc", "/root", "/proc", "/sys", "/dev", "/boot", "/var/run", "/usr", "/bin", "/sbin", "C:/Windows", "C:/Program Files"}
 	for _, p := range disallowedPrefixes {
-		if strings.HasPrefix(cleanReqPath, p) {
+		if strings.HasPrefix(normalizedPath, p) || strings.HasPrefix(cleanReqPath, p) || strings.EqualFold(normalizedPath, p) {
 			http.Error(w, `{"error":"forbidden system directory path"}`, http.StatusForbidden)
 			return
 		}
@@ -1052,6 +1053,82 @@ func (h *TrainingHandler) HandleModels(w http.ResponseWriter, r *http.Request) {
 				Width:       0.75,
 				IsCustom:    true,
 				WeightsPath: weightsPath,
+			}
+			official = append([]ModelZooItem{customItem}, official...)
+		}
+	}
+
+	// Auto-discover models from storage/models directory
+	seenIDs := make(map[string]bool)
+	for _, it := range official {
+		seenIDs[it.ID] = true
+	}
+
+	manifestFiles := []string{
+		"storage/models/plugin.json",
+		"storage/models/person_detection_reinforced_manifest.json",
+	}
+	for _, mf := range manifestFiles {
+		if data, err := os.ReadFile(mf); err == nil {
+			var plug struct {
+				ID           string   `json:"id"`
+				Name         string   `json:"name"`
+				Architecture string   `json:"architecture"`
+				Classes      []string `json:"classes"`
+				Description  string   `json:"description"`
+			}
+			if err := json.Unmarshal(data, &plug); err == nil && plug.ID != "" && !seenIDs[plug.ID] {
+				seenIDs[plug.ID] = true
+				weightsPath := filepath.Join("storage/models", plug.ID+".pt")
+				if _, err := os.Stat(weightsPath); err != nil {
+					weightsPath = "storage/models/person_detection_reinforced.pt"
+				}
+				customItem := ModelZooItem{
+					ID:          plug.ID,
+					Name:        fmt.Sprintf("%s (%s)", plug.Name, plug.Architecture),
+					Family:      "CUSTOM / TRAINED",
+					Task:        "DETECT",
+					Desc:        plug.Description,
+					MAP50_95:    58.1,
+					Params:      20.4,
+					FLOPS:       68.0,
+					TRTLatency:  0.92,
+					NMSFree:     strings.Contains(plug.Architecture, "26"),
+					Depth:       0.67,
+					Width:       0.75,
+					IsCustom:    true,
+					WeightsPath: weightsPath,
+				}
+				official = append([]ModelZooItem{customItem}, official...)
+			}
+		}
+	}
+
+	if entries, err := os.ReadDir("storage/models"); err == nil {
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(e.Name(), ".pt") {
+				continue
+			}
+			mID := strings.TrimSuffix(e.Name(), ".pt")
+			if seenIDs[mID] || mID == "yolo26m" || mID == "yolo26n" {
+				continue
+			}
+			seenIDs[mID] = true
+			customItem := ModelZooItem{
+				ID:          mID,
+				Name:        strings.ToUpper(strings.ReplaceAll(mID, "_", " ")),
+				Family:      "CUSTOM / TRAINED",
+				Task:        "DETECT",
+				Desc:        fmt.Sprintf("Modelo customizado em storage/models/%s", e.Name()),
+				MAP50_95:    58.1,
+				Params:      20.4,
+				FLOPS:       68.0,
+				TRTLatency:  0.92,
+				NMSFree:     strings.Contains(mID, "26"),
+				Depth:       0.67,
+				Width:       0.75,
+				IsCustom:    true,
+				WeightsPath: filepath.Join("storage/models", e.Name()),
 			}
 			official = append([]ModelZooItem{customItem}, official...)
 		}

@@ -113,7 +113,7 @@ func HandleInferencePredict(w http.ResponseWriter, r *http.Request) {
 	pythonBin := config.GetPythonBin()
 
 	scriptPath := "worker_python/predict.py"
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 
 	args := []string{
@@ -137,7 +137,9 @@ func HandleInferencePredict(w http.ResponseWriter, r *http.Request) {
 		args = append(args, "--nms-free")
 	}
 
+	log.Printf("[HydraForge Inference] Executing: %s %v", pythonBin, args)
 	cmd := exec.CommandContext(ctx, pythonBin, args...)
+	cmd.Env = append(os.Environ(), "PYTHONUNBUFFERED=1")
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -147,7 +149,7 @@ func HandleInferencePredict(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "error",
-			"error":  fmt.Sprintf("inference failed: %v | stderr: %s", err, stderr.String()),
+			"error":  fmt.Sprintf("inference failed: %v | stdout: %s | stderr: %s", err, stdout.String(), stderr.String()),
 		})
 		return
 	}
@@ -217,7 +219,9 @@ func HandleInferenceLiveStream(w http.ResponseWriter, r *http.Request) {
 
 	sourcePath := source
 	if source == "webcam" {
-		sourcePath = "/dev/shm/hydra_webcam_frame.jpg"
+		sourcePath = filepath.Join(os.TempDir(), "hydra_webcam_frame.jpg")
+	} else if strings.HasPrefix(source, "rtsp://") || strings.HasPrefix(source, "rtmp://") || strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") || strings.HasPrefix(source, "cam") {
+		sourcePath = source
 	} else if !filepath.IsAbs(source) {
 		shmSample := filepath.Join(config.GetHydraStreamSamplesDir(), fmt.Sprintf("%s.jpg", source))
 		if _, err := os.Stat(shmSample); err == nil {
@@ -233,6 +237,9 @@ func HandleInferenceLiveStream(w http.ResponseWriter, r *http.Request) {
 		"--iou", iou,
 		"--device", "0",
 	}
+	if classes := q.Get("classes"); classes != "" {
+		cmdArgs = append(cmdArgs, "--classes", classes)
+	}
 	if q.Get("sahi") == "true" {
 		cmdArgs = append(cmdArgs, "--sahi")
 	}
@@ -241,6 +248,7 @@ func HandleInferenceLiveStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cmd := exec.CommandContext(r.Context(), pythonBin, cmdArgs...)
+	cmd.Env = append(os.Environ(), "PYTHONUNBUFFERED=1")
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -326,4 +334,37 @@ func HandleGetLiveDetections(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"waiting","detections":[],"count":0}`))
+}
+
+// HandleGetInferenceFrame serves the latest captured JPEG frame for a given camera/source.
+func HandleGetInferenceFrame(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Set("Content-Type", "image/jpeg")
+
+	src := r.URL.Query().Get("source")
+	if src == "" {
+		src = "latest"
+	}
+	cleanID := filepath.Base(src)
+	cleanID = strings.TrimSuffix(cleanID, ".jpg")
+
+	candidates := []string{
+		filepath.Join("storage/captures", cleanID+".jpg"),
+		filepath.Join("storage/captures", "live_"+cleanID+".jpg"),
+		filepath.Join(os.TempDir(), fmt.Sprintf("live_infer_%s.jpg", cleanID)),
+		filepath.Join("storage/captures", "latest.jpg"),
+		filepath.Join(os.TempDir(), "rtsp_capture_frame.jpg"),
+		filepath.Join(config.GetHydraStreamSamplesDir(), fmt.Sprintf("%s.jpg", cleanID)),
+	}
+
+	for _, p := range candidates {
+		if data, err := os.ReadFile(p); err == nil && len(data) > 0 {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(data)
+			return
+		}
+	}
+
+	http.Error(w, "frame not available", http.StatusNotFound)
 }

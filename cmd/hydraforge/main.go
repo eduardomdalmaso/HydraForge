@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"log"
 	"net/http"
@@ -18,7 +19,37 @@ import (
 	"hydraforge/internal/application"
 )
 
+func loadDotEnv(filenames ...string) {
+	for _, filename := range filenames {
+		f, err := os.Open(filename)
+		if err != nil {
+			continue
+		}
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) == 2 {
+				key := strings.TrimSpace(parts[0])
+				val := strings.TrimSpace(parts[1])
+				val = strings.Trim(val, `"'`)
+				if _, exists := os.LookupEnv(key); !exists {
+					_ = os.Setenv(key, val)
+				}
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			log.Printf("⚠️ [HydraForge] Warning reading %s: %v", filename, err)
+		}
+		_ = f.Close()
+	}
+}
+
 func main() {
+	loadDotEnv(".env")
 	log.Println("🚀 [HydraForge] Initializing YOLO AI Training Studio (Hexagonal Architecture + DDD)...")
 
 	// 1. Initialize Persistent Secondary Adapters (Driven)
