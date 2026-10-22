@@ -274,15 +274,28 @@ func (s *SQLiteStore) autoDiscoverDatasets(datasetsDir string) {
 
 		if _, err := os.Stat(yamlPath); err == nil {
 			sanitizeYamlPaths(yamlPath, fullPath)
-			trainCount := countDir(filepath.Join(fullPath, "train", "images"))
-			valCount := countDir(filepath.Join(fullPath, "valid", "images"))
+			trainCount := countDir(filepath.Join(fullPath, "images", "train"))
+			if trainCount == 0 {
+				trainCount = countDir(filepath.Join(fullPath, "train", "images"))
+			}
+			valCount := countDir(filepath.Join(fullPath, "images", "val"))
 			if valCount == 0 {
 				valCount = countDir(filepath.Join(fullPath, "val", "images"))
 			}
-			testCount := countDir(filepath.Join(fullPath, "test", "images"))
+			if valCount == 0 {
+				valCount = countDir(filepath.Join(fullPath, "images", "valid"))
+			}
+			if valCount == 0 {
+				valCount = countDir(filepath.Join(fullPath, "valid", "images"))
+			}
+			testCount := countDir(filepath.Join(fullPath, "images", "test"))
+			if testCount == 0 {
+				testCount = countDir(filepath.Join(fullPath, "test", "images"))
+			}
 			if trainCount == 0 && valCount == 0 {
 				trainCount = countImages(fullPath)
 			}
+			sizeBytes := calcDirSize(fullPath)
 			name := strings.ReplaceAll(id, "_", " ")
 			name = strings.ReplaceAll(name, "-", " ")
 			name = strings.ToUpper(name[:1]) + name[1:]
@@ -295,8 +308,9 @@ func (s *SQLiteStore) autoDiscoverDatasets(datasetsDir string) {
 				ON CONFLICT(dataset_id) DO UPDATE SET 
 					name=excluded.name, yaml_path=excluded.yaml_path,
 					classes_json=excluded.classes_json, num_classes=excluded.num_classes,
-					train_images=excluded.train_images, val_images=excluded.val_images, test_images=excluded.test_images`
-			_, _ = s.db.Exec(query, id, name, "detect", yamlPath, string(classesJSON), len(classes), trainCount, valCount, testCount, 0, time.Now())
+					train_images=excluded.train_images, val_images=excluded.val_images, test_images=excluded.test_images,
+					size_bytes=excluded.size_bytes`
+			_, _ = s.db.Exec(query, id, name, "detect", yamlPath, string(classesJSON), len(classes), trainCount, valCount, testCount, sizeBytes, time.Now())
 		}
 	}
 }
@@ -1036,6 +1050,17 @@ func countDir(dirPath string) int {
 		}
 	}
 	return count
+}
+
+func calcDirSize(path string) int64 {
+	var size int64
+	_ = filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err == nil && info != nil && !info.IsDir() {
+			size += info.Size()
+		}
+		return nil
+	})
+	return size
 }
 
 func parseYamlClasses(yamlPath string) []string {

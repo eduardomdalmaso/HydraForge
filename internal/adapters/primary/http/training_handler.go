@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -215,8 +214,13 @@ func (h *TrainingHandler) HandleDatasetImage(w http.ResponseWriter, r *http.Requ
 	clean := filepath.Clean(relPath)
 	var fullPath string
 	for _, base := range config.GetDatasetsSearchDirs() {
-		cand := filepath.Clean(filepath.Join(base, clean))
-		if strings.HasPrefix(cand, base) {
+		absBase, err := filepath.Abs(base)
+		if err != nil {
+			continue
+		}
+		cand := filepath.Clean(filepath.Join(absBase, clean))
+		rel, err := filepath.Rel(absBase, cand)
+		if err == nil && !strings.HasPrefix(rel, "..") {
 			if _, err := os.Stat(cand); err == nil {
 				fullPath = cand
 				break
@@ -235,7 +239,7 @@ func (h *TrainingHandler) HandleDatasetImage(w http.ResponseWriter, r *http.Requ
 	http.ServeFile(w, r, fullPath)
 }
 
-// HandleDatasetSample returns a sample image with bounding box for a given class.
+// HandleDatasetSample returns sample images with bounding boxes for a given class.
 func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	dsID := r.URL.Query().Get("id")
@@ -255,20 +259,6 @@ func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Req
 	}
 	if dsDir == "" {
 		dsDir = filepath.Join("datasets", dsID)
-	}
-	labelsDir := filepath.Join(dsDir, "train", "labels")
-	imagesDir := filepath.Join(dsDir, "train", "images")
-	if _, err := os.Stat(imagesDir); err != nil {
-		if _, err := os.Stat(filepath.Join(dsDir, "images")); err == nil {
-			imagesDir = filepath.Join(dsDir, "images")
-		} else {
-			imagesDir = dsDir
-		}
-	}
-	if _, err := os.Stat(labelsDir); err != nil {
-		if _, err := os.Stat(filepath.Join(dsDir, "labels")); err == nil {
-			labelsDir = filepath.Join(dsDir, "labels")
-		}
 	}
 
 	// Parse class names map from dataset domain
@@ -300,110 +290,146 @@ func (h *TrainingHandler) HandleDatasetSample(w http.ResponseWriter, r *http.Req
 		Annotations []BoxAnnotation `json:"annotations"`
 	}
 
+	type candidatePair struct {
+		imagesDir string
+		labelsDir string
+		subRel    string
+	}
+	pairs := []candidatePair{
+		{filepath.Join(dsDir, "images", "train"), filepath.Join(dsDir, "labels", "train"), filepath.Join("images", "train")},
+		{filepath.Join(dsDir, "train", "images"), filepath.Join(dsDir, "train", "labels"), filepath.Join("train", "images")},
+		{filepath.Join(dsDir, "images", "val"), filepath.Join(dsDir, "labels", "val"), filepath.Join("images", "val")},
+		{filepath.Join(dsDir, "val", "images"), filepath.Join(dsDir, "val", "labels"), filepath.Join("val", "images")},
+		{filepath.Join(dsDir, "images", "valid"), filepath.Join(dsDir, "labels", "valid"), filepath.Join("images", "valid")},
+		{filepath.Join(dsDir, "valid", "images"), filepath.Join(dsDir, "valid", "labels"), filepath.Join("valid", "images")},
+		{filepath.Join(dsDir, "images"), filepath.Join(dsDir, "labels"), "images"},
+		{dsDir, dsDir, ""},
+	}
+
 	var allMatches []*Match
-	entries, _ := os.ReadDir(labelsDir)
-	for _, e := range entries {
-		if !strings.HasSuffix(e.Name(), ".txt") {
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join(labelsDir, e.Name()))
+	seenImgs := make(map[string]bool)
+
+	for _, pair := range pairs {
+		entries, err := os.ReadDir(pair.labelsDir)
 		if err != nil {
 			continue
 		}
-		lines := strings.Split(string(data), "\n")
-		hasTarget := false
-		var imgAnnotations []BoxAnnotation
-		var primaryTargetBBox []float64
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(e.Name(), ".txt") {
+				continue
+			}
+			data, err := os.ReadFile(filepath.Join(pair.labelsDir, e.Name()))
+			if err != nil {
+				continue
+			}
+			lines := strings.Split(string(data), "\n")
+			hasTarget := false
+			var imgAnnotations []BoxAnnotation
+			var primaryTargetBBox []float64
 
-		for _, line := range lines {
-			parts := strings.Fields(line)
-			if len(parts) >= 5 {
-				cid := parts[0]
-				x, e1 := strconv.ParseFloat(parts[1], 64)
-				y, e2 := strconv.ParseFloat(parts[2], 64)
-				w, e3 := strconv.ParseFloat(parts[3], 64)
-				h, e4 := strconv.ParseFloat(parts[4], 64)
-				if e1 == nil && e2 == nil && e3 == nil && e4 == nil {
-					isTgt := (targetClass == "" || cid == targetClass || cid == targetClassIdx)
-					if isTgt {
-						hasTarget = true
-						if len(primaryTargetBBox) == 0 {
-							primaryTargetBBox = []float64{x, y, w, h}
+			for _, line := range lines {
+				parts := strings.Fields(line)
+				if len(parts) >= 5 {
+					cid := parts[0]
+					x, e1 := strconv.ParseFloat(parts[1], 64)
+					y, e2 := strconv.ParseFloat(parts[2], 64)
+					w, e3 := strconv.ParseFloat(parts[3], 64)
+					h, e4 := strconv.ParseFloat(parts[4], 64)
+					if e1 == nil && e2 == nil && e3 == nil && e4 == nil {
+						isTgt := (targetClass == "" || cid == targetClass || cid == targetClassIdx)
+						if isTgt {
+							hasTarget = true
+							if len(primaryTargetBBox) == 0 {
+								primaryTargetBBox = []float64{x, y, w, h}
+							}
 						}
+						cName := classNamesMap[cid]
+						if cName == "" {
+							cName = fmt.Sprintf("class_%s", cid)
+						}
+						imgAnnotations = append(imgAnnotations, BoxAnnotation{
+							ClassID:   cid,
+							ClassName: cName,
+							BBox:      []float64{x, y, w, h},
+							IsTarget:  isTgt,
+						})
 					}
-					cName := classNamesMap[cid]
-					if cName == "" {
-						cName = fmt.Sprintf("class_%s", cid)
+				}
+			}
+
+			if hasTarget {
+				baseName := strings.TrimSuffix(e.Name(), ".txt")
+				var imgFile string
+				for _, ext := range []string{".jpg", ".png", ".jpeg", ".JPG", ".PNG"} {
+					if _, err := os.Stat(filepath.Join(pair.imagesDir, baseName+ext)); err == nil {
+						imgFile = baseName + ext
+						break
 					}
-					imgAnnotations = append(imgAnnotations, BoxAnnotation{
-						ClassID:   cid,
-						ClassName: cName,
-						BBox:      []float64{x, y, w, h},
-						IsTarget:  isTgt,
+				}
+				if imgFile != "" && !seenImgs[imgFile] {
+					seenImgs[imgFile] = true
+					relPath := filepath.ToSlash(filepath.Join(dsID, pair.subRel, imgFile))
+					allMatches = append(allMatches, &Match{
+						ImageURL:    fmt.Sprintf("/api/v1/training/datasets/image?path=%s", relPath),
+						Filename:    imgFile,
+						BBox:        primaryTargetBBox,
+						ClassID:     targetClass,
+						Annotations: imgAnnotations,
 					})
 				}
 			}
 		}
+	}
 
-		if hasTarget {
-			baseName := strings.TrimSuffix(e.Name(), ".txt")
-			var imgFile string
+	// Fallback to raw images if no labeled target matches found
+	if len(allMatches) == 0 {
+		for _, pair := range pairs {
 			for _, ext := range []string{".jpg", ".png", ".jpeg", ".JPG", ".PNG"} {
-				if _, err := os.Stat(filepath.Join(imagesDir, baseName+ext)); err == nil {
-					imgFile = baseName + ext
+				imgs, _ := filepath.Glob(filepath.Join(pair.imagesDir, "*"+ext))
+				for _, picked := range imgs {
+					imgBase := filepath.Base(picked)
+					if seenImgs[imgBase] {
+						continue
+					}
+					seenImgs[imgBase] = true
+					relPath := filepath.ToSlash(filepath.Join(dsID, pair.subRel, imgBase))
+					defaultBox := []float64{0.5, 0.5, 0.6, 0.6}
+					allMatches = append(allMatches, &Match{
+						ImageURL: fmt.Sprintf("/api/v1/training/datasets/image?path=%s", relPath),
+						Filename: imgBase,
+						BBox:     defaultBox,
+						ClassID:  targetClass,
+						Annotations: []BoxAnnotation{
+							{ClassID: targetClass, ClassName: targetClass, BBox: defaultBox, IsTarget: true},
+						},
+					})
+					if len(allMatches) >= 15 {
+						break
+					}
+				}
+				if len(allMatches) >= 15 {
 					break
 				}
 			}
-			if imgFile != "" {
-				relPath := filepath.Join(dsID, "train", "images", imgFile)
-				allMatches = append(allMatches, &Match{
-					ImageURL:    fmt.Sprintf("/api/v1/training/datasets/image?path=%s", relPath),
-					Filename:    imgFile,
-					BBox:        primaryTargetBBox,
-					ClassID:     targetClass,
-					Annotations: imgAnnotations,
-				})
+			if len(allMatches) > 0 {
+				break
 			}
 		}
 	}
 
-	var foundMatch *Match
-	if len(allMatches) > 0 {
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		foundMatch = allMatches[r.Intn(len(allMatches))]
-	}
-
-	if foundMatch == nil {
-		var rawImgs []string
-		for _, ext := range []string{".jpg", ".png", ".jpeg", ".JPG", ".PNG"} {
-			imgs, _ := filepath.Glob(filepath.Join(imagesDir, "*"+ext))
-			rawImgs = append(rawImgs, imgs...)
-		}
-		if len(rawImgs) > 0 {
-			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-			picked := rawImgs[r.Intn(len(rawImgs))]
-			imgBase := filepath.Base(picked)
-			relPath := filepath.Join(dsID, "train", "images", imgBase)
-			defaultBox := []float64{0.5, 0.5, 0.6, 0.6}
-			foundMatch = &Match{
-				ImageURL: fmt.Sprintf("/api/v1/training/datasets/image?path=%s", relPath),
-				Filename: imgBase,
-				BBox:     defaultBox,
-				ClassID:  targetClass,
-				Annotations: []BoxAnnotation{
-					{ClassID: targetClass, ClassName: targetClass, BBox: defaultBox, IsTarget: true},
-				},
-			}
-		}
-	}
-
-	if foundMatch == nil {
+	if len(allMatches) == 0 {
 		http.Error(w, `{"error":"no images found in dataset"}`, http.StatusNotFound)
 		return
 	}
 
-	json.NewEncoder(w).Encode(foundMatch)
+	// Limit to max 20 samples to avoid payload bloat while allowing rich navigation
+	if len(allMatches) > 20 {
+		allMatches = allMatches[:20]
+	}
+
+	json.NewEncoder(w).Encode(allMatches)
 }
+
 
 // HandleDatasetByID handles GET and DELETE /api/v1/training/datasets/{id}.
 func (h *TrainingHandler) HandleDatasetByID(w http.ResponseWriter, r *http.Request) {

@@ -18,7 +18,10 @@ const fetchSample = async () => {
   isLoading.value = true
   try {
     const res = await fetch(`/api/v1/training/datasets/sample?id=${props.datasetId}&class=${encodeURIComponent(props.className)}&t=${Date.now()}`)
-    if (res.ok) sample.value = await res.json()
+    if (res.ok) {
+      const data = await res.json()
+      sample.value = Array.isArray(data) ? (data[0] || null) : data
+    }
   } finally {
     isLoading.value = false
   }

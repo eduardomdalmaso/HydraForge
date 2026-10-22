@@ -45,10 +45,19 @@ func NewMemoryStore() *MemoryStore {
 							continue
 						}
 					// Count images
-					trainCount := countDirFiles(filepath.Join(datasetsDir, id, "train", "images"))
-					valCount := countDirFiles(filepath.Join(datasetsDir, id, "valid", "images"))
+					trainCount := countDirFiles(filepath.Join(datasetsDir, id, "images", "train"))
+					if trainCount == 0 {
+						trainCount = countDirFiles(filepath.Join(datasetsDir, id, "train", "images"))
+					}
+					valCount := countDirFiles(filepath.Join(datasetsDir, id, "images", "val"))
 					if valCount == 0 {
 						valCount = countDirFiles(filepath.Join(datasetsDir, id, "val", "images"))
+					}
+					if valCount == 0 {
+						valCount = countDirFiles(filepath.Join(datasetsDir, id, "images", "valid"))
+					}
+					if valCount == 0 {
+						valCount = countDirFiles(filepath.Join(datasetsDir, id, "valid", "images"))
 					}
 
 					classes := parseYamlClasses(yamlPath)
