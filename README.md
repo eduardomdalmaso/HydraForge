@@ -34,6 +34,7 @@ Training, fine-tuning, and optimizing state-of-the-art YOLO computer vision mode
 - **Dual Progress & Lifecycle Controls:** Independent bars for **Current Epoch Progress (0–100%)** and **Total Session Progress**, with instant **ABORT**, **RESTART**, and **RESUME** actions.
 - **Multi-GPU Telemetry Cycler:** Aggregates total cluster VRAM while automatically cycling between individual device sensors (Temp, Watts, SM load) every 3 seconds.
 - **1-Click TensorRT & ONNX Exporter:** Compiles completed training runs directly into high-throughput **TensorRT `.engine`** files optimized for sub-millisecond edge inference in [HydraStream](https://github.com/eduardomdalmaso/HydraStream).
+- **Integrated Vault Module (Curation & Active Learning):** Real-time edge case collection from cameras (`/api/v1/vault/inbox/upload`), perceptual deduplication with pHash, zero-shot auto-labeling (SAM 2 / YOLO-World), and unified YOLO `data.yaml` dataset splits export.
 
 ---
 

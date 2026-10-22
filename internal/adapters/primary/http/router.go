@@ -94,6 +94,20 @@ func RegisterRoutes(mux *http.ServeMux, h *TrainingHandler, bh *BenchmarkHandler
 	mux.HandleFunc("/api/v1/inference/detections", HandleGetLiveDetections)
 }
 
+// RegisterVaultRoutes registers HydraVault dataset curation and active learning inbox endpoints.
+func RegisterVaultRoutes(mux *http.ServeMux, vh *VaultHandler) {
+	if vh == nil {
+		return
+	}
+	// 1. Namespaced Vault endpoints
+	mux.HandleFunc("/api/v1/vault/datasets", vh.HandleDatasets)
+	mux.HandleFunc("/api/v1/vault/datasets/", vh.HandleDatasetItem)
+	mux.HandleFunc("/api/v1/vault/inbox/upload", vh.HandleUpload)
+
+	// 2. Direct backwards-compatible Vault endpoints
+	mux.HandleFunc("/api/v1/inbox/upload", vh.HandleUpload)
+}
+
 // WithCORS wraps an http.Handler with universal Cross-Origin Resource Sharing headers.
 func WithCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

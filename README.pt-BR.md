@@ -34,6 +34,7 @@ O **HydraForge** fornece um **Cockpit de Treinamento e Estúdio de Compilação 
 - **Barras Duplas de Progresso & Controles de Ciclo de Vida:** Barra da **Época Atual (0–100%)** e Barra da **Sessão Total**, com ações imediatas de **ABORT**, **RESTART** e **RESUME**.
 - **Ciclo Automático Multi-GPU:** Soma a VRAM total do cluster e alterna a cada 3 segundos a leitura individual dos sensores de temperatura, watts e carga de cada GPU.
 - **Exportação 1-Clique para TensorRT e ONNX:** Converte modelos treinados diretamente em arquivos **TensorRT `.engine`** de altíssimo throughput para inferência no [HydraStream](https://github.com/eduardomdalmaso/HydraStream).
+- **Módulo Vault Integrado (Curadoria & Active Learning):** Coleta automática de *edge cases* das câmeras (`/api/v1/vault/inbox/upload`), deduplicação perceptual por pHash, auto-rotulagem zero-shot (SAM 2 / YOLO-World) e exportação unificada de datasets YOLO `data.yaml`.
 
 ---
 

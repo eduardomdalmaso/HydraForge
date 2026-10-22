@@ -1,0 +1,137 @@
+package application
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
+	"io"
+	"path/filepath"
+	"time"
+
+	"github.com/google/uuid"
+
+	"hydraforge/internal/domain"
+	"hydraforge/internal/ports"
+)
+
+// IngestCommand contains payload for image ingestion.
+type IngestCommand struct {
+	DatasetID   string
+	CameraID    string
+	FileName    string
+	ImageReader io.Reader
+	BBoxes      []domain.BBox
+	SourceEvent string
+	CapturedAt  time.Time
+}
+
+// VaultIngestService coordinates frame ingestion, deduplication and storage.
+type VaultIngestService struct {
+	frameRepo   ports.IFrameRepository
+	datasetRepo ports.IVaultDatasetRepository
+	fileStore   ports.IFileStore
+	dedup       ports.IDeduplicator
+}
+
+// NewVaultIngestService creates a new VaultIngestService instance.
+func NewVaultIngestService(
+	frameRepo ports.IFrameRepository,
+	datasetRepo ports.IVaultDatasetRepository,
+	fileStore ports.IFileStore,
+	dedup ports.IDeduplicator,
+) *VaultIngestService {
+	return &VaultIngestService{
+		frameRepo:   frameRepo,
+		datasetRepo: datasetRepo,
+		fileStore:   fileStore,
+		dedup:       dedup,
+	}
+}
+
+// IngestFrame ingests an image, computes pHash, checks deduplication and persists it.
+func (s *VaultIngestService) IngestFrame(ctx context.Context, cmd IngestCommand) (*domain.Frame, error) {
+	// Verify dataset exists or auto-create dynamic dataset
+	if _, err := s.datasetRepo.GetByID(ctx, cmd.DatasetID); err != nil {
+		_ = s.datasetRepo.Save(ctx, &domain.VaultDataset{
+			DatasetID:   cmd.DatasetID,
+			Name:        fmt.Sprintf("Dataset %s", cmd.DatasetID),
+			Description: "Dataset auto-criado pela esteira de ingestão do HydraForge Vault.",
+			Task:        domain.TaskDetect,
+			Classes: []domain.ClassMetadata{
+				{ID: 0, Name: "object"},
+			},
+		})
+	}
+
+	// Buffer image bytes for decoding and storage
+	data, err := io.ReadAll(cmd.ImageReader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read image data: %w", err)
+	}
+
+	img, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	bounds := img.Bounds()
+	width, height := bounds.Dx(), bounds.Dy()
+
+	// Compute perceptual hash
+	phashVal, err := s.dedup.ComputePHash(img)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute phash: %w", err)
+	}
+
+	// Deduplication check: distance <= 3 is considered duplicate
+	if existing, err := s.frameRepo.FindByPHash(ctx, phashVal, 3); err == nil && existing != nil {
+		if existing.CameraID == cmd.CameraID {
+			return existing, fmt.Errorf("%w (matches %s with distance <= 3)", domain.ErrDuplicateFrame, existing.FrameID)
+		}
+	}
+
+	frameID := "frm_" + uuid.New().String()[:12]
+	ext := filepath.Ext(cmd.FileName)
+	if ext == "" {
+		ext = ".jpg"
+	}
+	savedFileName := frameID + ext
+	relPath := filepath.Join("inbox", cmd.DatasetID, savedFileName)
+
+	absPath, sizeBytes, err := s.fileStore.Save(ctx, relPath, bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("failed to save image blob: %w", err)
+	}
+
+	capturedAt := cmd.CapturedAt
+	if capturedAt.IsZero() {
+		capturedAt = time.Now().UTC()
+	}
+
+	frame := &domain.Frame{
+		FrameID:     frameID,
+		DatasetID:   cmd.DatasetID,
+		CameraID:    cmd.CameraID,
+		FilePath:    absPath,
+		FileName:    savedFileName,
+		PHash:       phashVal,
+		Width:       width,
+		Height:      height,
+		SizeBytes:   sizeBytes,
+		Status:      domain.FrameStatusRaw,
+		Split:       domain.SplitNone,
+		BBoxes:      cmd.BBoxes,
+		SourceEvent: cmd.SourceEvent,
+		CapturedAt:  capturedAt,
+	}
+
+	if err := s.frameRepo.Save(ctx, frame); err != nil {
+		_ = s.fileStore.Delete(ctx, relPath)
+		return nil, fmt.Errorf("failed to save frame metadata: %w", err)
+	}
+
+	return frame, nil
+}

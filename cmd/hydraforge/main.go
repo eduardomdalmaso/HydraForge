@@ -7,12 +7,16 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
 	primaryHttp "hydraforge/internal/adapters/primary/http"
+	"hydraforge/internal/adapters/secondary/exporter/yolo"
+	"hydraforge/internal/adapters/secondary/filestore"
 	"hydraforge/internal/adapters/secondary/gpu"
+	"hydraforge/internal/adapters/secondary/phash"
 	"hydraforge/internal/adapters/secondary/sqlite"
 	"hydraforge/internal/adapters/secondary/storage"
 	"hydraforge/internal/adapters/secondary/worker"
@@ -94,8 +98,26 @@ func main() {
 	handler := primaryHttp.NewTrainingHandler(trainingService)
 	bmkHandler := primaryHttp.NewBenchmarkHandler(trainingService)
 	mediaHandler := primaryHttp.NewMediaHandler(mediaService)
+
+	// 5. Initialize Vault Curation & Active Learning Engine
+	vaultStore, err := sqlite.NewVaultStore(sqlStore.DB())
+	if err != nil {
+		log.Fatalf("❌ Failed to initialize Vault Store: %v", err)
+	}
+	vaultFileStore, err := filestore.NewFileStore(filepath.Join("datasets"))
+	if err != nil {
+		log.Fatalf("❌ Failed to initialize Vault File Store: %v", err)
+	}
+	vaultDedup := phash.NewDeduplicator()
+	vaultExporter := yolo.NewExporter(filepath.Join("datasets", "curated"))
+	vaultDatasetService := application.NewVaultDatasetService(vaultStore.DatasetRepo, vaultStore.FrameRepo, vaultExporter)
+	vaultIngestService := application.NewVaultIngestService(vaultStore.FrameRepo, vaultStore.DatasetRepo, vaultFileStore, vaultDedup)
+	vaultHandler := primaryHttp.NewVaultHandler(vaultDatasetService, vaultIngestService, vaultFileStore)
+
 	mux := http.NewServeMux()
 	primaryHttp.RegisterRoutes(mux, handler, bmkHandler, mediaHandler)
+	primaryHttp.RegisterVaultRoutes(mux, vaultHandler)
+	log.Println("🏛️ [HydraForge] Vault Curation & Active Learning Engine initialized on /api/v1/vault")
 
 	// Static SPA Web UI
 	mux.Handle("/", http.FileServer(http.Dir("./web/dist")))

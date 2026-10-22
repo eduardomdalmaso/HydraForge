@@ -56,6 +56,11 @@ func (s *SQLiteStore) Close() error {
 	return nil
 }
 
+// DB returns the underlying sql.DB connection.
+func (s *SQLiteStore) DB() *sql.DB {
+	return s.db
+}
+
 func (s *SQLiteStore) migrate() error {
 	schema := `
 	CREATE TABLE IF NOT EXISTS registered_datasets (
