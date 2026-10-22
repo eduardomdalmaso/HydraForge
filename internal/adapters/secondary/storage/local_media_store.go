@@ -52,105 +52,6 @@ func (s *LocalMediaStore) resolvePath(folderName, filename string) (string, erro
 	return clean, nil
 }
 
-// ListSources scans root and subfolders for video files.
-func (s *LocalMediaStore) ListSources(ctx context.Context) (*domain.MediaSourcesResponse, error) {
-	entries, err := os.ReadDir(s.baseDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read media base directory: %w", err)
-	}
-
-	var folders []domain.MediaFolder
-	var rootFiles []domain.MediaFile
-	var rootBytes int64
-	totalFiles := 0
-
-	// Check root files first
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			ext := strings.ToLower(filepath.Ext(entry.Name()))
-			if isVideoExtension(ext) {
-				info, err := entry.Info()
-				if err == nil {
-					file := domain.MediaFile{
-						ID:        "root/" + entry.Name(),
-						Name:      entry.Name(),
-						Folder:    "root",
-						Path:      filepath.Join(s.baseDir, entry.Name()),
-						SizeBytes: info.Size(),
-						ModTime:   info.ModTime(),
-						StreamURL: fmt.Sprintf("/api/v1/media/stream/root/%s", entry.Name()),
-					}
-					rootFiles = append(rootFiles, file)
-					rootBytes += info.Size()
-					totalFiles++
-				}
-			}
-		}
-	}
-
-	if len(rootFiles) > 0 {
-		folders = append(folders, domain.MediaFolder{
-			Name:       "root",
-			Label:      "GERAL // RAIZ",
-			FileCount:  len(rootFiles),
-			TotalBytes: rootBytes,
-			Files:      rootFiles,
-		})
-	}
-
-	// Scan subdirectories
-	for _, entry := range entries {
-		if entry.IsDir() {
-			folderName := entry.Name()
-			folderPath := filepath.Join(s.baseDir, folderName)
-			subEntries, err := os.ReadDir(folderPath)
-			if err != nil {
-				continue
-			}
-
-			files := []domain.MediaFile{}
-			var folderBytes int64
-
-			for _, sub := range subEntries {
-				if !sub.IsDir() {
-					ext := strings.ToLower(filepath.Ext(sub.Name()))
-					if isVideoExtension(ext) {
-						info, err := sub.Info()
-						if err == nil {
-							f := domain.MediaFile{
-								ID:        folderName + "/" + sub.Name(),
-								Name:      sub.Name(),
-								Folder:    folderName,
-								Path:      filepath.Join(folderPath, sub.Name()),
-								SizeBytes: info.Size(),
-								ModTime:   info.ModTime(),
-								StreamURL: fmt.Sprintf("/api/v1/media/stream/%s/%s", folderName, sub.Name()),
-							}
-							files = append(files, f)
-							folderBytes += info.Size()
-							totalFiles++
-						}
-					}
-				}
-			}
-
-			folders = append(folders, domain.MediaFolder{
-				Name:       folderName,
-				Label:      strings.ToUpper(folderName),
-				FileCount:  len(files),
-				TotalBytes: folderBytes,
-				Files:      files,
-			})
-		}
-	}
-
-	return &domain.MediaSourcesResponse{
-		TotalFolders: len(folders),
-		TotalFiles:   totalFiles,
-		Folders:      folders,
-	}, nil
-}
-
 // CreateFolder creates a new category directory under baseDir.
 func (s *LocalMediaStore) CreateFolder(ctx context.Context, folderName string) error {
 	folderPath, err := s.resolvePath(folderName, "")
@@ -176,7 +77,6 @@ func (s *LocalMediaStore) SaveFile(ctx context.Context, folderName string, filen
 		return nil, err
 	}
 
-	// Ensure parent dir exists
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %w", err)
